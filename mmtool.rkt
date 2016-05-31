@@ -9,11 +9,11 @@
 ;;; Control parameters --------------------------------------
 (define verbose? (make-parameter #f))
 ;;; Location of cache files
-(define cache-dir (build-path (current-directory) "mm-cache"))
+(define cache-dir (make-parameter (build-path (current-directory) "mm-cache")))
 ;;; Meta cache file. Contains IDs for currently cached objects. 
-(define cache-meta-file (build-path cache-dir "cache"))
+(define cache-meta-file (make-parameter (build-path (cache-dir) "cache")))
 ;;; Contents of cache items appear in this file
-(define cache-contents (build-path cache-dir "cache-data"))
+(define cache-file (make-parameter (build-path (cache-dir) "cache-data")))
 
 ;;; Command line arguments
 (define greeting
@@ -22,7 +22,7 @@
    #:once-each
    [("-v") "Verbose mode" (verbose? #t)]
    #:args
-   (str) str))
+   (filename) filename))
 
 
 ;;; For now, we work with data manually. All functions below that
@@ -65,6 +65,18 @@
 ;;; on the user's command line argument(s)
 (define (main)
   (samples->hash (flatten (find-hashtags-by-tweet))))
+
+;;; Load cache meta-data. If the cache meta file doesn't exist, create
+;;; it.
+(define (load-cache-meta)
+  (if (file-exists? (cache-meta-file))
+      (with-input-from-file (cache-meta-file)
+	(λ () (read (current-input-port))))
+      ;; Cache doesn't exist. Create an empty cache
+      (begin
+	(unless (file-exists? (cache-dir)) (make-directory (cache-dir)))
+	(with-output-to-file (cache-meta-file)
+	  (λ () (write (make-hash)))))))
 
 ;;; Returns the given input document's cache ID for lookup
 (define (cache-id source-path)
