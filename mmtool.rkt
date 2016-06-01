@@ -71,10 +71,13 @@
 
 (define (display-hashtags)
   (let ([hash-tags (hash-ref (cache) 'hashtags #f)]
-	[f (λ (x) (samples->hash (flatten x)))])
+	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+			 (λ (x y) (> (cdr x) (cdr y)))))])
     (if (and (use-cache?) hash-tags)
-	(displayln (f hash-tags))
-	(displayln (f (find-hashtags-by-record))))))
+	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
+		  (f hash-tags))
+	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
+		  (f (find-hashtags-by-record))))))
 
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
