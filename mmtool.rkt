@@ -121,6 +121,7 @@
   (cond
    [(equal? (task) 'hash-tags) (display-hashtags)]
    [(equal? (task) 'user-mentions) (display-user-mentions)]
+   [(equal? (task) 'purge-cache) (purge-cache)]
    [else (displayln "You must request a specific task")]))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
@@ -156,8 +157,8 @@
 
 ;;; Write cache. Call this only when the current file's cache has
 ;;; changed
-(define (write-cache)
-  (hash-set! (full-cache) (cache-key) (cache))
+(define (write-cache #:cache-set? [cache-set? #f])
+  (unless cache-set? (hash-set! (full-cache) (cache-key) (cache)))
   (with-output-to-file (cache-file)
     (λ () (write (full-cache)))
     #:exists 'replace))
@@ -168,6 +169,30 @@
     (λ () (write (cache-meta)))
     #:exists 'replace))
 
+;;; Purge cache. This function will purge the cache contents for
+;;; data-file. If data-file is null (the user passed no filename at
+;;; runtime), then purge the entire cache!
+(define (purge-cache)
+  (if (null? (cache-key))
+      (begin
+	(displayln "Purging entire cache")
+	;; Purge meta cache info
+	(with-output-to-file (cache-meta-file)
+	  (λ () (write (make-hash)))
+	  #:exists 'replace)
+	;; Purge cache contents
+	(with-output-to-file (cache-file)
+	  (λ () (write (make-hash)))
+	  #:exists 'replace))
+      ;; User supplied a file name at runtime. Only purge data for the
+      ;; specified file
+      (begin
+	(printf "Purging cache for ~a\n" (cache-key))
+	(hash-remove! (cache-meta) (cache-key))
+	(hash-remove! (full-cache) (cache-key))
+	(write-cache #:cache-set? #t)
+	(write-cache-meta))))
+
 ;;; Command line parsing
 (define filename
   (command-line
@@ -177,6 +202,7 @@
    #:once-any
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
+   [("--purge-cache") "Purge cache (optionally for 1 file)" (task 'purge-cache)]
    #:args
    ([fname null])
    fname))
@@ -208,7 +234,7 @@
    [else (printf "Error: File ~a does not exist\n" data-file)])
 
   ;; If anything has changed the cache, save it now
-  (when (save-cache?) (write-cache))
+  (when (save-cache?) (write-cache) (write-cache-meta))
   
   ;; Update the meta cache if needed
   (when (and (cache-results?) (update-cache?))
