@@ -53,6 +53,12 @@
       (let ([hash-regexp #px"#[[:alpha:]][[:alnum:]_]+"])
 	(regexp-match* hash-regexp record))))
 
+(define (usernames record)
+  (if (not (string? record))
+      '()
+      (let ([hash-regexp #px"@[[:alpha:]][[:alnum:]_]+"])
+	(regexp-match* hash-regexp record))))
+
 (define (find-hashtags-by-record)
   (let loop ([hash-tags '()]
 	     [record (read-json (current-input-port))])
@@ -60,7 +66,7 @@
 	(begin
 	  ;; We have a list of lists, 1 for each input record. Each sub-list
 	  ;; is a list contains hashtags present in that record, or an empty
-	  ;; list if none. Saved this value to our cache
+	  ;; list if none. Save this value to our cache
 	  (when (cache-results?)
 	    (hash-set! (cache) 'hashtags hash-tags)
 	    (save-cache? #t))
@@ -69,6 +75,23 @@
 	(loop (cons (hashtags (hash-ref record 'text #f)) hash-tags)
 	      (read-json (current-input-port))))))
 
+(define (find-usernames-by-record)
+  (let loop ([user-names '()]
+	     [record (read-json (current-input-port))])
+    (if (eof-object? record)
+	(begin
+	  ;; We have a list of lists, 1 for each input record. Each sub-list
+	  ;; is a list contains hashtags present in that record, or an empty
+	  ;; list if none. Save this value to our cache
+	  (when (cache-results?)
+	    (hash-set! (cache) 'usernames user-names)
+	    (save-cache? #t))
+	  ;; Return value
+	  user-names)
+	(loop (cons (usernames (hash-ref record 'text #f)) user-names)
+	      (read-json (current-input-port))))))
+
+;;; Call this to display hash-tags for the --hash-tags task
 (define (display-hashtags)
   (let ([hash-tags (hash-ref (cache) 'hashtags #f)]
 	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
@@ -79,6 +102,17 @@
 	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
 		  (f (find-hashtags-by-record))))))
 
+;;; Call this to display @usernames for the --user-mentions task
+(define (display-user-mentions)
+  (let ([user-names (hash-ref (cache) 'usernames #f)]
+	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+			 (λ (x y) (> (cdr x) (cdr y)))))])
+    (if (and (use-cache?) user-names)
+	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
+		  (f user-names))
+	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
+		  (f (find-usernames-by-record))))))
+
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
@@ -86,6 +120,7 @@
 (define (task-dispatch)
   (cond
    [(equal? (task) 'hash-tags) (display-hashtags)]
+   [(equal? (task) 'user-mentions) (display-user-mentions)]
    [else (displayln "You must request a specific task")]))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
@@ -140,7 +175,8 @@
    #:once-each
    [("-v") "Verbose mode" (verbose? #t)]
    #:once-any
-   [("--hash-tags") "Display hashtags" (task 'hash-tags)]
+   [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
+   [("--user-mentions") "Display @usernames" (task 'user-mentions)]
    #:args
    ([fname null])
    fname))
