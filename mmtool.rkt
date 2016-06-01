@@ -92,7 +92,7 @@
 ;; (define (cache-id source-path)
 ;;   (let ([cache (read (cache-dir))])))
 
-;;; Go!
+;;; Command line parsing
 (define filename
   (command-line
    #:program "mmtool"
@@ -104,10 +104,11 @@
    ([fname null])
    fname))
 
-(with-input-from-file filename
-  (λ () (task-dispatch)))
+(define (process-data data-file)
+  (cond
+   [(null? data-file) (task-dispatch)]
+   [(file-exists? data-file) (with-input-from-file data-file (λ () (task-dispatch)))]
+   [else (printf "Error: File ~a does not exist\n" data-file)]))
 
-
-;; (printf "~a~a\n"
-;; 	greeting
-;; 	(if (verbose?) " to you, too!" ""))
+;;; Go!
+(process-data filename)
