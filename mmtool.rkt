@@ -14,15 +14,20 @@
 (define cache-meta-file (make-parameter (build-path (cache-dir) "cache")))
 ;;; Contents of cache items appear in this file
 (define cache-file (make-parameter (build-path (cache-dir) "cache-data")))
+;;; This parameter controls which task mmtool will carry out. It is
+;;; set at runtime by one of the once-any command line arguments
+(define task (make-parameter #f))
 
 ;;; Command line arguments
-(define greeting
-  (command-line
-   #:program "mmtool"
-   #:once-each
-   [("-v") "Verbose mode" (verbose? #t)]
-   #:args
-   (filename) filename))
+;; (define greeting
+;;   (command-line
+;;    #:program "mmtool"
+;;    #:once-each
+;;    [("-v") "Verbose mode" (verbose? #t)]
+;;    #:once-any
+;;    [("--hash-tags") "Display hashtags" (task 'hash-tags)]
+;;    #:args
+;;    (filename) filename))
 
 
 ;;; For now, we work with data manually. All functions below that
@@ -63,8 +68,10 @@
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
 ;;; on the user's command line argument(s)
-(define (main)
-  (samples->hash (flatten (find-hashtags-by-tweet))))
+(define (task-dispatch)
+  (cond
+   [(equal? (task) 'hash-tags) (samples->hash (flatten (find-hashtags-by-tweet)))]
+   [else (displayln "You must request a specific task")]))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
 ;;; it.
@@ -76,14 +83,29 @@
       (begin
 	(unless (file-exists? (cache-dir)) (make-directory (cache-dir)))
 	(with-output-to-file (cache-meta-file)
-	  (λ () (write (make-hash)))))))
+	  (λ () (write (make-hash))))
+	;; We created a cache file for next time. But we also need a
+	;; fresh, empty cache this first time
+	(make-hash))))
 
 ;;; Returns the given input document's cache ID for lookup
-(define (cache-id source-path)
-  (let ([cache (read (cache-dir))])))
+;; (define (cache-id source-path)
+;;   (let ([cache (read (cache-dir))])))
 
 ;;; Go!
-;;; (main)
+(define filename
+  (command-line
+   #:program "mmtool"
+   #:once-each
+   [("-v") "Verbose mode" (verbose? #t)]
+   #:once-any
+   [("--hash-tags") "Display hashtags" (task 'hash-tags)]
+   #:args
+   ([fname null])
+   fname))
+
+(with-input-from-file filename
+  (λ () (task-dispatch)))
 
 
 ;; (printf "~a~a\n"
