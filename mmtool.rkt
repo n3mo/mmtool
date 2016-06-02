@@ -6,8 +6,10 @@
 
 (require math json)
 
+;;; Current version
+(define mmtool-version "0.0.1 (2016-06-01)")
+
 ;;; Control parameters --------------------------------------
-(define verbose? (make-parameter #f))
 ;;; Location of cache files
 (define cache-dir (make-parameter (build-path (current-directory) "mm-cache")))
 ;;; Meta cache file. Contains IDs for currently cached objects. 
@@ -122,6 +124,7 @@
    [(equal? (task) 'hash-tags) (display-hashtags)]
    [(equal? (task) 'user-mentions) (display-user-mentions)]
    [(equal? (task) 'purge-cache) (purge-cache)]
+   [(equal? (task) 'version) (print-version)]
    [else (displayln "You must request a specific task")]))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
@@ -193,17 +196,27 @@
 	(write-cache #:cache-set? #t)
 	(write-cache-meta))))
 
+;; Prints the current version of massmine, and useful info
+(define (print-version)
+  (displayln (string-append "mmtool " mmtool-version))
+  (displayln "https://github.com/n3mo/mmtool")
+  (newline)
+  (displayln "Copyright (C) 2016 Nicholas M. Van Horn")
+  (displayln "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.")
+  (displayln "This is free software: you are free to change and redistribute it.")
+  (displayln "There is NO WARRANTY, to the extent permitted by law."))
+
 ;;; Command line parsing
 (define filename
   (command-line
    #:program "mmtool"
-   #:once-each
-   [("-v") "Verbose mode" (verbose? #t)]
+   ;; #:once-each
    #:once-any
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
    ;; [("--anonymize") "Anonymize @usernames" (task 'anonymize)]
    [("--purge-cache") "Purge cache (optionally for 1 file)" (task 'purge-cache)]
+   [("-v" "--version") "Version info" (task 'version)]
    #:args
    ([fname null])
    fname))
