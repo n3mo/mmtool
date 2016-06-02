@@ -36,10 +36,10 @@
 (define cache-key (make-parameter null))
 ;; The cache for the current file. This hash is a nested hash
 ;; contained within full-cache
-(define cache (make-parameter null))
+(define cache (make-parameter (make-hash)))
 ;;; The actual meta cache used by mmtool's internals during runtime,
 ;;; as a hash
-(define cache-meta (make-parameter null))
+(define cache-meta (make-parameter (make-hash)))
 ;;; This parameter controls which task mmtool will carry out. It is
 ;;; set at runtime by one of the once-any command line arguments
 (define task (make-parameter #f))
@@ -202,6 +202,7 @@
    #:once-any
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
+   ;; [("--anonymize") "Anonymize @usernames" (task 'anonymize)]
    [("--purge-cache") "Purge cache (optionally for 1 file)" (task 'purge-cache)]
    #:args
    ([fname null])
