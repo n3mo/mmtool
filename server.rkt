@@ -49,7 +49,7 @@
      `(html (head (title "MassMine: Your Data Analysis"))
 	    (body (p ,(string-append "Command received: " cmd))
 		  (p "Results of command execution")
-		  (div ((id "output"))
+		  (div ((id "output") (style "border:1px solid black;"))
 		       (pre ,(run-user-command cmd))))))))
 
 
