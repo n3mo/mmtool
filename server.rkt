@@ -104,4 +104,5 @@
 
 ;;; Start the application (servlet)
 (serve/servlet mmgui
-	       #:servlet-path "/mmtool")
+	       #:servlet-path "/mmtool"
+	       #:servlet-current-directory (current-directory))
