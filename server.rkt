@@ -11,8 +11,13 @@
 (define (mmgui req)
   (user-input-form req))
  
+
 (define mm-tasks-radio
-  (radio-group '("version" "twitter-locations")))
+  (radio-group '("twitter-followers" "twitter-friends"
+		 "twitter-locations" "twitter-sample"
+		 "twitter-search" "twitter-stream"
+		 "twitter-trends" "twitter-trends-nohash"
+		 "twitter-user")))
 
 ;;; Command line input formlet
 ;; (define CLI-formlet
@@ -24,27 +29,28 @@
 ;;; A version with radio buttons (TODO)
 (define CLI-formlet
   (formlet
-   (div "Command line program name:" ,{input-string . => . program-name}
-	(div
+   (div 
+    (div ((id "task"))
 	 "Choose a task:" ,{mm-tasks-radio . => . task})
-        "Options/Flags:" ,{input-string . => . flags-and-options})
-   (list program-name task flags-and-options)))
+    "Options/Flags:" ,{input-string . => . flags-and-options})
+   (list task flags-and-options)))
 
 
 ;;; Run the user's requested command and capture the output as a string
 (define (run-user-command user-command)
-  (let ((sys-command (string-join user-command " ")))
-    (with-output-to-string (λ () (system sys-command)))))
+  (with-output-to-string (λ () (system user-command))))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
-  (response/xexpr
-   `(html (head (title "MassMine: Your Data Analysis"))
-          (body (p ,(string-join (cons "Command received: "
-				       input-command)))
-		(p "Results of command execution")
-		;; (pre ,(run-user-command input-command))
-		))))
+  (let* ((task (first input-command))
+	 (flags (second input-command))
+	 (cmd (string-append "massmine --task=" task " " flags)))
+    (response/xexpr
+     `(html (head (title "MassMine: Your Data Analysis"))
+	    (body (p ,(string-append "Command received: " cmd))
+		  (p "Results of command execution")
+		  (div ((id "output"))
+		       (pre ,(run-user-command cmd))))))))
 
 
 
