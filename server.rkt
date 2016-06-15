@@ -11,19 +11,23 @@
 (define (mmgui req)
   (user-input-form req))
  
-
-;; (define mm-tasks-formlet
-;;   (radio-group '("twitter-followers" "twitter-friends"
-;; 		 "twitter-locations" "twitter-sample"
-;; 		 "twitter-search" "twitter-stream"
-;; 		 "twitter-trends" "twitter-trends-nohash"
-;; 		 "twitter-user")))
+;;; List of tasks in a selection formlet
 (define mm-tasks-formlet
-  (select-input '("twitter-followers" "twitter-friends"
-		  "twitter-locations" "twitter-sample"
-		  "twitter-search" "twitter-stream"
+  (select-input '("google-country-trends" "google-trends"
+		  "tumblr-auth" "tumblr-blog-info" "tumblr-posts"
+		  "tumblr-tag" "twitter-auth" "twitter-followers"
+		  "twitter-friends" "twitter-locations"
+		  "twitter-sample" "twitter-search" "twitter-stream"
 		  "twitter-trends" "twitter-trends-nohash"
-		  "twitter-user")))
+		  "twitter-user" "web-text" "wikipedia-page-links"
+		  "wikipedia-search" "wikipedia-text"
+		  "wikipedia-views")))
+
+; File upload formlet
+(define file-upload-formlet
+  (formlet
+   (div ,{(required (file-upload)) . => . a-file})
+   a-file))
 
 ;;; Command line input formlet
 ;; (define CLI-formlet
@@ -52,21 +56,22 @@
     (div ((id "task"))
 	 "Choose a task:" ,{mm-tasks-formlet . => . task})
     (div ((id "options"))
-	 "Auth File:" ,{input-string . => . user-auth}
-	 "Config File:" ,{input-string . => . user-config}
+	 "Auth File:" ,{file-upload-formlet . => . user-auth}
+	 "Config File:" ,{file-upload-formlet . => . user-config}
+	 "Output File:" ,{file-upload-formlet . => . user-output}
 	 "Count:" ,{input-string . => . user-count}
 	 "Date:" ,{input-string . => . user-date}
 	 "Duration:" ,{input-string . => . user-dur}
 	 "Geo Location:" ,{input-string . => . user-geo}
-	 "Language:" ,{input-string . => . user-lang}
-	 "Output File:" ,{input-string . => . user-output}
+	 "Language:" ,{input-string . => . user-lang}	 
 	 "Query:" ,{input-string . => . user-query}
 	 "User:" ,{input-string . => . user-user})
     )
-   (hash 'auth user-auth 'config user-config 'count user-count
-	 'date user-date 'dur user-dur 'geo user-geo
-	 'lang user-lang 'output user-output 'query user-query
-	 'user user-user 'task task)))
+   (hash 'auth (bytes->string/utf-8 user-auth)
+	 'config (bytes->string/utf-8 user-config)
+	 'output (bytes->string/utf-8 user-output)
+	 'count user-count 'date user-date 'dur user-dur 'geo user-geo
+	 'lang user-lang 'query user-query 'user user-user 'task task)))
 
 
 ;;; Run the user's requested command and capture the output as a string
@@ -90,8 +95,9 @@
 (define (user-input-form request)
   (define (response-generator embed/url)
     (response/xexpr
-     `(html (head (title "MassMine: Your Data Analysis"))
-	    (body (p "Please enter a command")
+     `(html (head (title "MassMine: Your Data Analysis")
+		  (link ((href "style.css") (rel "stylesheet") (type "text/css"))))
+	    (body (h1 "MassMine automated command builder")
 		  (form ([action
 			  ,(embed/url user-command-handler)])
 			,@(formlet-display CLI-formlet)
@@ -105,4 +111,5 @@
 ;;; Start the application (servlet)
 (serve/servlet mmgui
 	       #:servlet-path "/mmtool"
-	       #:servlet-current-directory (current-directory))
+	       #:servlet-current-directory (current-directory)
+	       #:extra-files-paths (list (current-directory)))
