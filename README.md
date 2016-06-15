@@ -1,6 +1,6 @@
 # A Tool For Working With MassMine Data
 
-This repo is not yet fit for public consumption yet. In time, this will grow into a tool for working with data collected using [MassMine](http://www.massmine.org). 
+This repo is not yet fit for public consumption. In time, this will grow into a tool for working with data collected using [MassMine](http://www.massmine.org). 
 
 ## Features (coming soon)
 
@@ -13,6 +13,7 @@ Creating a one-size-fits-all analysis tool for social media and web data researc
 * Time series analyses. How quickly were tweets occurring across time? Do changes in tweet patterns correspond to other identifiable data patterns? Etc.
 * Tweet "hydration". Make your Twitter data set share-able by reducing tweets to coded representations permitted by Twitter.
 * Filtering/removal of unnecessary data fields in MassMine JSON. MassMine returns a lot of information. You probably don't need it all. Reduce your data's file size by filtering out the chaff from the wheat. 
+* Visual, web-browser interface for running MassMine and working with the resulting data.
 * And more!
 
 ## Caching by default
