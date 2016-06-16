@@ -5,12 +5,28 @@
 (require web-server/servlet
          web-server/servlet-env
 	 web-server/formlets
-	 web-server/page)
-
-;;; Our response handler
-(define (mmgui req)
-  (user-input-form req))
+	 web-server/page
+	 web-server/dispatch)
  
+;; The system can support multiple URLs (disguised as tabs/panels
+;; within the "gui")  
+(define-values (mmtool-dispatch mmtool-url)
+    (dispatch-rules
+     [("") main-interface]
+     [("collect") user-input-form]
+     [("analysis") analysis-interface]
+     ;;[else main-interface]
+     ))
+
+(define (mmgui req)
+  (mmtool-dispatch req))
+
+;; (define (mmgui req)
+;;   (let ([handler (mmtool-dispatch req)])
+;;     (cond
+;;      [(equal? handler '(user-input-form)) (user-input-form req)]
+;;      [else (user-input-form req)])))
+
 ;;; List of tasks in a selection formlet
 (define mm-tasks-formlet
   (select-input '("google-country-trends" "google-trends"
@@ -81,13 +97,33 @@
 ;;; main interface template
 (define (main-template title body)
   (response/xexpr
-   `(html
-     (head
-      (title ,title)
-      (link ((href "style.css") (rel "stylesheet") (type "text/css"))))
-     (body
-      (a ((href "http://localhost:8000/mmtool")) "Start Over")
-      ,@body))))
+   `(html ((xmlns "http://www.w3.org/1999/xhtml"))
+	  (head
+	   (meta ((content "text/html; charset=UTF-8") (http-equiv "content-type"))) 
+	   (title ,title)
+	   (link ((href "/style.css") (rel "stylesheet") (type "text/css"))))
+	  (body
+	   (div ((id "header"))
+		(a ((href "/")) "Main") " | "
+		(a ((href "/collect")) "Collection") " | "
+		(a ((href "/analysis")) "Analysis"))
+	   ,@body))))
+
+;;; Main interface. The user is greeted with this page on startup
+(define (main-interface request)
+  (main-template
+   "MassMine: Your Data Analysis"
+   `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
+     (div ((id "working-directory"))
+	  "Your working directory is: " ,(path->string (current-directory))))))
+
+;;; Entry point for data analysis/cleaning/exporting/etc.
+(define (analysis-interface request)
+  (main-template
+   "MassMine: Your Data Analysis"
+   `((h1 "Data Processing and Analysis Entrypoint")
+     (div ((id "working-directory"))
+	  "Your working directory is: " ,(path->string (current-directory))))))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
@@ -141,6 +177,8 @@
 
 ;;; Start the application (servlet)
 (serve/servlet mmgui
-	       #:servlet-path "/mmtool"
+	       ;;#:servlet-path "/mmtool"
+	       #:servlet-path "/"
+	       #:servlet-regexp #rx""
 	       #:servlet-current-directory (current-directory)
 	       #:extra-files-paths (list (current-directory)))
