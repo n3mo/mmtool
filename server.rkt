@@ -58,7 +58,7 @@
     (div ((id "options"))
 	 "Auth File:" ,{file-upload-formlet . => . user-auth}
 	 "Config File:" ,{file-upload-formlet . => . user-config}
-	 "Output File:" ,{file-upload-formlet . => . user-output}
+	 "Output File:" ,{input-string . => . user-output}
 	 "Count:" ,{input-string . => . user-count}
 	 "Date:" ,{input-string . => . user-date}
 	 "Duration:" ,{input-string . => . user-dur}
@@ -69,7 +69,7 @@
     )
    (hash 'auth (bytes->string/utf-8 user-auth)
 	 'config (bytes->string/utf-8 user-config)
-	 'output (bytes->string/utf-8 user-output)
+	 'output user-output
 	 'count user-count 'date user-date 'dur user-dur 'geo user-geo
 	 'lang user-lang 'query user-query 'user user-user 'task task)))
 
@@ -78,35 +78,66 @@
 (define (run-user-command user-command)
   (with-output-to-string (λ () (system user-command))))
 
+;;; main interface template
+(define (main-template title body)
+  (response/xexpr
+   `(html
+     (head
+      (title ,title)
+      (link ((href "style.css") (rel "stylesheet") (type "text/css"))))
+     (body
+      (a ((href "http://localhost:8000/mmtool")) "Start Over")
+      ,@body))))
+
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
   (let* ((cmd (build-mm-command input-command)))
-    (response/xexpr
-     `(html (head (title "MassMine: Your Data Analysis"))
-	    (body (p ,(string-append "Command received: " cmd))
-		  (p "Results of command execution")
-		  (div ((id "output") (style "border:1px solid black;"))
-		       (pre ,(run-user-command cmd))
-		       ))))))
+    (main-template
+      "MassMine: Your Data Analysis"
+     `((p ,(string-append "Command received: " cmd))
+	    (p "Results of command execution")
+	    (div ((id "output") (style "border:1px solid black;"))
+		 (pre ,(run-user-command cmd)))))))
 
 
 
 ;;; Provide a form for user input
 (define (user-input-form request)
   (define (response-generator embed/url)
-    (response/xexpr
-     `(html (head (title "MassMine: Your Data Analysis")
-		  (link ((href "style.css") (rel "stylesheet") (type "text/css"))))
-	    (body (h1 "MassMine automated command builder")
-		  (form ([action
-			  ,(embed/url user-command-handler)])
-			,@(formlet-display CLI-formlet)
-			(input ([type "submit"])))))))
+    (main-template "MassMine: Your Data Analysis"
+		   `((h1 "MassMine automated command builder")
+		     (form ([action
+			     ,(embed/url user-command-handler)])
+			   ,@(formlet-display CLI-formlet)
+			   (input ([type "submit"]))))))
   (define (user-command-handler request)
     (confirm-user-input
      (formlet-process CLI-formlet request)
      request))
   (send/suspend/dispatch response-generator))
+
+;;; An attempt at a web-server/templates-based approach. 
+;;; Template for main page(s)
+;; (define (default-template contents)
+;;   (include-template "./templates/default.html"))
+;; (define (user-input-form request)
+;;   (define (response-generator embed/url)
+;;     (response/full
+;;      200 #"Okay"
+;;      (current-seconds) TEXT/HTML-MIME-TYPE
+;;      empty
+;;      (list (string->bytes/utf-8
+;; 	    (default-template
+;; 	      `((h1 "MassMine automated command builder")
+;; 		(form ([action
+;; 			,(embed/url user-command-handler)])
+;; 		      ,@(formlet-display CLI-formlet)
+;; 		      (input ([type "submit"])))))))))
+;;   (define (user-command-handler request)
+;;     (confirm-user-input
+;;      (formlet-process CLI-formlet request)
+;;      request))
+;;   (send/suspend/dispatch response-generator))
 
 ;;; Start the application (servlet)
 (serve/servlet mmgui
