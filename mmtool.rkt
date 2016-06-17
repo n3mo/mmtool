@@ -6,6 +6,8 @@
 
 (require math json)
 
+(include "server.rkt")
+
 ;;; Current version
 (define mmtool-version "0.0.1 (2016-06-01)")
 
@@ -121,11 +123,12 @@
 ;;; on the user's command line argument(s)
 (define (task-dispatch)
   (cond
+   [(equal? (task) 'gui) (start-gui)]
    [(equal? (task) 'hash-tags) (display-hashtags)]
    [(equal? (task) 'user-mentions) (display-user-mentions)]
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
-   [else (displayln "You must request a specific task")]))
+   [else (start-gui)]))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
 ;;; it.
@@ -212,6 +215,7 @@
    #:program "mmtool"
    ;; #:once-each
    #:once-any
+   [("--gui") "Run graphical user interface" (task 'gui)]
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
    ;; [("--anonymize") "Anonymize @usernames" (task 'anonymize)]

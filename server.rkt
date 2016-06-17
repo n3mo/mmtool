@@ -1,6 +1,3 @@
-#! /usr/bin/env racket
-#lang racket
-
 ;;; Dependencies
 (require racket/runtime-path
 	 web-server/servlet
@@ -145,8 +142,7 @@
   (main-template
    "MassMine: Your Data Analysis"
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
-     (div ((id "working-directory"))
-	  "Your working directory is: " ,(path->string (current-directory))))))
+     (p "Please choose an option above"))))
 
 ;;; Entry point for data analysis/cleaning/exporting/etc.
 (define (analysis-interface request)
@@ -230,10 +226,11 @@
 ;;   (send/suspend/dispatch response-generator))
 
 ;;; Start the application (servlet)
-(serve/servlet mmgui
-	       ;;#:servlet-path "/mmtool"
-	       #:servlet-path "/"
-	       #:servlet-regexp #rx""
-	       #:servlet-current-directory (current-directory)
-	       #:server-root-path server-path
-	       #:extra-files-paths (list (current-directory)))
+(define (start-gui)
+  (serve/servlet mmgui
+		 ;;#:servlet-path "/mmtool"
+		 #:servlet-path "/"
+		 #:servlet-regexp #rx""
+		 #:servlet-current-directory (current-directory)
+		 #:server-root-path server-path
+		 #:extra-files-paths (list (current-directory))))
