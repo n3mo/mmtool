@@ -48,6 +48,10 @@
 		  "wikipedia-search" "wikipedia-text"
 		  "wikipedia-views")))
 
+;;; Analysis tasks formlet
+(define analysis-tasks-formlet
+  (select-input '("#hashtags" "@user-mentions")))
+
 ; File upload formlet
 (define file-upload-formlet
   (formlet
@@ -90,14 +94,31 @@
 	 "Geo Location:" ,{input-string . => . user-geo}
 	 "Language:" ,{input-string . => . user-lang}	 
 	 "Query:" ,{input-string . => . user-query}
-	 "User:" ,{input-string . => . user-user})
-    )
+	 "User:" ,{input-string . => . user-user}))
    (hash 'auth (bytes->string/utf-8 user-auth)
 	 'config (bytes->string/utf-8 user-config)
 	 'output user-output
 	 'count user-count 'date user-date 'dur user-dur 'geo user-geo
 	 'lang user-lang 'query user-query 'user user-user 'task task)))
 
+;;; Analysis main page formlet
+(define analysis-formlet
+  (formlet
+   (div
+    (div ((id "task"))
+	 "Choose a task:" ,{analysis-tasks-formlet . => . task}))
+   (hash 'task task)))
+
+;;; Analysis dispatch. When the user selects an analysis/processing
+;;; task, this function determines who to call
+(define (analysis-dispatch hsh)
+  ;; Each analysis/processing task must be defined here. Each defined
+  ;; procedure must return an X-expression that can be embedded in our
+  ;; main-template
+  ;;(define (hashtag-dispatch))
+  (main-template
+   "MassMine: Your Data Analysis"
+   `((p ,(string-append "Executed task: " (hash-ref hsh 'task))))))
 
 ;;; Run the user's requested command and capture the output as a string
 (define (run-user-command user-command)
@@ -133,6 +154,10 @@
     (main-template
      "MassMine: Your Data Analysis"
      `((h1 "Data Processing and Analysis Entrypoint")
+       (form ([action
+		    ,(embed/url analysis-handler)])
+		  ,@(formlet-display analysis-formlet)
+		  (input ([type "submit"])))
        (div ((id "data-info"))
 	    (h3 "Your working directory is: ")
 	    (div ((id "path-view")) ,(path->string (current-directory)))
@@ -142,25 +167,27 @@
 		      (active-data-file) "<none selected>"))
 	    (br)
 	    (form ([action
-		    ,(embed/url user-command-handler)])
+		    ,(embed/url file-select-handler)])
 		  ,@(formlet-display file-upload-formlet)
 		  (input ([type "submit"])))))))
-  (define (user-command-handler request)
+  (define (file-select-handler request)
     (active-data-file
      (bytes->string/utf-8
       (formlet-process file-upload-formlet request)))
     (analysis-interface (redirect/get)))
+  (define (analysis-handler request)
+    (analysis-dispatch (formlet-process analysis-formlet request)))
   (send/suspend/dispatch response-generator))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
   (let* ((cmd (build-mm-command input-command)))
     (main-template
-      "MassMine: Your Data Analysis"
+     "MassMine: Your Data Analysis"
      `((p ,(string-append "Command received: " cmd))
-	    (p "Results of command execution")
-	    (div ((id "output") (style "border:1px solid black;"))
-		 (pre ,(run-user-command cmd)))))))
+       (p "Results of command execution")
+       (div ((id "output") (style "border:1px solid black;"))
+	    (pre ,(run-user-command cmd)))))))
 
 
 
