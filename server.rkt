@@ -8,6 +8,11 @@
 	 web-server/page
 	 web-server/dispatch)
  
+;;; Parameters
+
+;;; The current file selected by the user for data analysis/processing
+(define active-data-file (make-parameter #f))
+
 ;; The system can support multiple URLs (disguised as tabs/panels
 ;; within the "gui")  
 (define-values (mmtool-dispatch mmtool-url)
@@ -119,11 +124,28 @@
 
 ;;; Entry point for data analysis/cleaning/exporting/etc.
 (define (analysis-interface request)
-  (main-template
-   "MassMine: Your Data Analysis"
-   `((h1 "Data Processing and Analysis Entrypoint")
-     (div ((id "working-directory"))
-	  "Your working directory is: " ,(path->string (current-directory))))))
+  (define (response-generator embed/url)
+    (main-template
+     "MassMine: Your Data Analysis"
+     `((h1 "Data Processing and Analysis Entrypoint")
+       (div ((id "data-info"))
+	    (h3 "Your working directory is: ")
+	    (div ((id "path-view")) ,(path->string (current-directory)))
+	    (h3 "Your active data file is: ")
+	    (div ((id "path-view"))
+		 ,(if (active-data-file)
+		      (active-data-file) "<none selected>"))
+	    (br)
+	    (form ([action
+		    ,(embed/url user-command-handler)])
+		  ,@(formlet-display file-upload-formlet)
+		  (input ([type "submit"])))))))
+  (define (user-command-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
+  (send/suspend/dispatch response-generator))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
