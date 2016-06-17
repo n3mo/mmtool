@@ -142,7 +142,10 @@
   (main-template
    "MassMine: Your Data Analysis"
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
-     (p "Please choose an option above"))))
+     (p "Please choose an option above")
+     (div ((id "data-info"))
+	    (h3 "Your working directory is: ")
+	    (div ((id "path-view")) ,(path->string (current-directory)))))))
 
 ;;; Entry point for data analysis/cleaning/exporting/etc.
 (define (analysis-interface request)
@@ -192,6 +195,9 @@
   (define (response-generator embed/url)
     (main-template "MassMine: Your Data Analysis"
 		   `((h1 "MassMine automated command builder")
+		     (div ((id "data-info"))
+			  (h3 "Your working directory is: ")
+			  (div ((id "path-view")) ,(path->string (current-directory))))
 		     (form ([action
 			     ,(embed/url user-command-handler)])
 			   ,@(formlet-display CLI-formlet)
