@@ -2,14 +2,18 @@
 #lang racket
 
 ;;; Dependencies
-(require web-server/servlet
+(require racket/runtime-path
+	 web-server/servlet
          web-server/servlet-env
 	 web-server/formlets
 	 web-server/page
 	 web-server/dispatch)
  
-;;; Parameters
+;;; Runtime path. This is useful for locating bundled web server
+;;; items, such as CSS files, etc.
+(define-runtime-path server-path "extras")
 
+;;; Parameters ----------------------------------------------------
 ;;; The current file selected by the user for data analysis/processing
 (define active-data-file (make-parameter #f))
 
@@ -102,17 +106,18 @@
 ;;; main interface template
 (define (main-template title body)
   (response/xexpr
-   `(html ((xmlns "http://www.w3.org/1999/xhtml"))
-	  (head
-	   (meta ((content "text/html; charset=UTF-8") (http-equiv "content-type"))) 
-	   (title ,title)
-	   (link ((href "/style.css") (rel "stylesheet") (type "text/css"))))
-	  (body
-	   (div ((id "header"))
-		(a ((href "/")) "Main") " | "
-		(a ((href "/collect")) "Collection") " | "
-		(a ((href "/analysis")) "Analysis"))
-	   ,@body))))
+   #:preamble #"<!DOCTYPE html>"
+   `(html
+     (head
+      (meta ((content "text/html; charset=UTF-8") (http-equiv "content-type"))) 
+      (title ,title)
+      (link ((href "/style.css") (rel "stylesheet") (type "text/css"))))
+     (body
+      (div ((id "header"))
+	   (a ((href "/")) "Main") " | "
+	   (a ((href "/collect")) "Collection") " | "
+	   (a ((href "/analysis")) "Analysis"))
+      ,@body))))
 
 ;;; Main interface. The user is greeted with this page on startup
 (define (main-interface request)
@@ -203,4 +208,5 @@
 	       #:servlet-path "/"
 	       #:servlet-regexp #rx""
 	       #:servlet-current-directory (current-directory)
+	       #:server-root-path server-path
 	       #:extra-files-paths (list (current-directory)))

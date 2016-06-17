@@ -1,0 +1,61 @@
+body
+{
+    font-family: Arial, Sans-Serif;
+    font-size: 13px;
+}
+
+#options
+{
+    font-family: Arial, Sans-Serif;
+    font-size: 13px;
+    background-color: #d6e5f4;
+    padding: 10px;
+    width:310px;
+}
+
+#options input, #options textarea
+			 {
+			     font-family: Arial, Sans-Serif;
+			     font-size: 13px;
+			     margin-bottom: 5px;
+			     display: block;
+			     padding: 4px;
+			     width: 300px;
+			 }
+
+.activeField
+{
+    background-image: none;
+    background-color: #ffffff;
+    border: solid 1px #33677F;
+}
+
+.idle
+{
+    border: solid 1px #85b1de;
+    background-image: url( 'blue_bg.png' );
+    background-repeat: repeat-x;
+    background-position: top;
+}
+
+h1 {
+    font-size: 20pt;
+}
+
+#data-info {
+    background-color: #333366;
+    color: #FFFFFF;
+    border: solid 2px #787878;
+    font-family: Arial, Sans-Serif;
+    font-size: 13px;
+    margin-bottom: 5px;
+    display: block;
+    padding: 4px;
+    width: 300px;
+    float: right;
+}
+
+#path-view {
+    background-color: #339966;
+    color: #FFFFFF;
+}
