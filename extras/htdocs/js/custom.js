@@ -8,8 +8,8 @@ $("#menu-toggle").click(function(e) {
 //////////////////////////////////////////
 $(document).ready(function() {
     if ($("#task select option:selected").val() == 0) {
-      $("#options p").removeClass("no-input");
-      $("#output, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
+      $("#output").removeClass("no-input");
+      $("#options p, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
     }
 });
 
@@ -21,8 +21,8 @@ $(document).ready(function(){
     var optionText = jQuery.inArray($("#task select option:selected").text(),
       ["google-country-trends", "twitter-locations"] );
     if (optionText >= 0) {
-      $("#options p, #output").removeClass("no-input");
-      $("#count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
+      $("#output").removeClass("no-input");
+      $("#options p, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
     }
  });
 });
