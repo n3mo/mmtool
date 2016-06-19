@@ -43,7 +43,8 @@
 		  "twitter-trends" "twitter-trends-nohash"
 		  "twitter-user" "web-text" "wikipedia-page-links"
 		  "wikipedia-search" "wikipedia-text"
-		  "wikipedia-views")))
+		  "wikipedia-views")
+		#:attributes '((id "task-selector"))))
 
 ;;; Analysis tasks formlet
 (define analysis-tasks-formlet
