@@ -7,7 +7,7 @@
 	 web-server/dispatch)
 
 ;;; Runtime path. This is useful for locating bundled web server
-;;; items, such as CSS files, etc.
+;;; items, such as CSS files, JS files, etc.
 (define-runtime-path server-path "extras")
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -16,6 +16,12 @@
 
 ;;; The current file selected by the user for data analysis/processing
 (define active-data-file (make-parameter #f))
+;;; Is massmine installed and available on the user's path (as
+;;; detected by mmtool?). We assume no, but check below. If installed,
+;;; this parameter is set to the version number of the installed
+;;; massmine executable
+(define massmine? (make-parameter #f))
+
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Dispatch
@@ -33,6 +39,23 @@
 
 (define (mmgui req)
   (mmtool-dispatch req))
+
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;            System Checking Routines
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; This contains code relevant to providing system checking
+;;; functionality (is MassMine installed? are things running
+;;; correctly? Can I find the user's data file? etc.
+
+;;; This determines if massmine is correctly installed on the user's
+;;; computer and sets the appropriate parameter at startup
+(when (find-executable-path "massmine")
+    (let ([version (with-output-to-string
+		     (λ () (system "massmine --version")))])
+      (massmine?
+       (car (regexp-match
+	     #px"[[:digit:]]{1,2}.[[:digit:]]{1,2}.[[:digit:]]{1,2}"
+	     version)))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               Formlets
@@ -194,8 +217,12 @@
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
      (p "Please choose an option above")
      (div ((id "data-info"))
-	    (h3 "Your working directory is: ")
-	    (div ((id "path-view")) ,(path->string (current-directory)))))))
+	  (div ((id "massmine-installed"))
+		 ,(if (massmine?)
+		      (string-append "Your MassMine version: " (massmine?))
+		      "No MassMine installation detected!"))
+	  (h3 "Your working directory is: ")
+	  (div ((id "path-view")) ,(path->string (current-directory)))))))
 
 ;;; Entry point for data analysis/cleaning/exporting/etc. found at "/analysis"
 (define (analysis-interface request)
@@ -208,6 +235,10 @@
 	     ,@(formlet-display analysis-formlet)
 	     (input ([type "submit"])))
        (div ((id "data-info"))
+	    (div ((id "massmine-installed"))
+		 ,(if (massmine?)
+		      (string-append "Your MassMine version: " (massmine?))
+		      "No MassMine installation detected!"))
 	    (h3 "Your working directory is: ")
 	    (div ((id "path-view")) ,(path->string (current-directory)))
 	    (h3 "Your active data file is: ")
@@ -245,6 +276,10 @@
      "MassMine: Your Data Analysis"
      `((h1 "MassMine automated command builder")
        (div ((id "data-info"))
+	    (div ((id "massmine-installed"))
+		 ,(if (massmine?)
+		      (string-append "Your MassMine version: " (massmine?))
+		      "No MassMine installation detected!"))
 	    (h3 "Your working directory is: ")
 	    (div ((id "path-view")) ,(path->string (current-directory))))
        (form ([action
