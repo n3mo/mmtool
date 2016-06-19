@@ -40,10 +40,6 @@ h1 {
     color: #FFFFFF;
 }
 
-/*#output, #count, #date, #duration, #location, #language, #query, #user {
-  display: none;
-}*/
-
 #options p {
     margin-top: 20px;
     font-size: large;
