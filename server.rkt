@@ -49,7 +49,7 @@
 
 ;;; This determines if massmine is correctly installed on the user's
 ;;; computer and sets the appropriate parameter at startup
-(when (find-executable-path "massmine")
+(when (find-executable-path "massmined")
     (let ([version (with-output-to-string
 		     (λ () (system "massmine --version")))])
       (massmine?
@@ -217,10 +217,11 @@
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
      (p "Please choose an option above")
      (div ((id "data-info"))
-	  (div ((id "massmine-installed"))
-		 ,(if (massmine?)
-		      (string-append "Your MassMine version: " (massmine?))
-		      "No MassMine installation detected!"))
+	  ,(if (massmine?)
+	       `(div ((id "installed"))
+		     ,(string-append "Your MassMine version: " (massmine?)))
+	       `(div ((id "no install"))
+		     "No MassMine installation detected!"))
 	  (h3 "Your working directory is: ")
 	  (div ((id "path-view")) ,(path->string (current-directory)))))))
 
@@ -235,10 +236,11 @@
 	     ,@(formlet-display analysis-formlet)
 	     (input ([type "submit"])))
        (div ((id "data-info"))
-	    (div ((id "massmine-installed"))
-		 ,(if (massmine?)
-		      (string-append "Your MassMine version: " (massmine?))
-		      "No MassMine installation detected!"))
+	    ,(if (massmine?)
+		 `(div ((id "installed"))
+		       ,(string-append "Your MassMine version: " (massmine?)))
+		 `(div ((id "no install"))
+		       "No MassMine installation detected!"))
 	    (h3 "Your working directory is: ")
 	    (div ((id "path-view")) ,(path->string (current-directory)))
 	    (h3 "Your active data file is: ")
@@ -276,10 +278,11 @@
      "MassMine: Your Data Analysis"
      `((h1 "MassMine automated command builder")
        (div ((id "data-info"))
-	    (div ((id "massmine-installed"))
-		 ,(if (massmine?)
-		      (string-append "Your MassMine version: " (massmine?))
-		      "No MassMine installation detected!"))
+	    ,(if (massmine?)
+		 `(div ((id "installed"))
+		       ,(string-append "Your MassMine version: " (massmine?)))
+		 `(div ((id "no install"))
+		       "No MassMine installation detected!"))
 	    (h3 "Your working directory is: ")
 	    (div ((id "path-view")) ,(path->string (current-directory))))
        (form ([action
