@@ -268,7 +268,7 @@
      "MassMine: Your Data Analysis"
      `((p ,(string-append "Command received: " cmd))
        (p "Results of command execution")
-       (div ((id "output") (style "border:1px solid black;"))
+       (div ((id "results"))
 	    (pre ,(run-user-command cmd)))))))
 
 ;;; The MassMine command builder page at "/collect"
