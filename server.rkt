@@ -64,7 +64,7 @@
 ;;; List of tasks in a selection formlet
 (define mm-tasks-formlet
 	;;; I removed twitter-auth and tumblr-auth from this list
-  (select-input '("google-country-trends" "google-trends"
+  (select-input '("Choose:" "google-country-trends" "google-trends"
 		  "tumblr-blog-info" "tumblr-posts"
 		  "tumblr-tag" "twitter-followers"
 		  "twitter-friends" "twitter-locations"
@@ -73,7 +73,7 @@
 		  "twitter-user" "web-text" "wikipedia-page-links"
 		  "wikipedia-search" "wikipedia-text"
 		  "wikipedia-views")
-		#:attributes '((id "task-selector"))))
+		#:attributes '((id "task-selector") (class "pull-right"))))
 
 ;;; Analysis tasks formlet
 (define analysis-tasks-formlet
@@ -88,22 +88,21 @@
 ;;; Command line input formlet
 (define CLI-formlet
   (formlet
-   (div ((class "col-lg-5"))
-	(div ((id "task"))
-	     "Choose a task:" ,{mm-tasks-formlet . => . task})
+   (div ((class "col-lg-4"))
+	(div ((id "task")) ,{mm-tasks-formlet . => . task})
 	(div ((id "options"))
 	     ;; "Auth File:" ,{file-upload-formlet . => . user-auth}
 	     ;; "Config File:" ,{file-upload-formlet . => . user-config}
-	     (p "This task requires no input. Submit Query")
+	    ; (p "This task requires no input. Submit Query")
 	     (ul
-	      (li ((id "output"))"Output File:" ,{input-string . => . user-output})
-	      (li ((id "count")) "Count:" ,{input-string . => . user-count})
-	      (li ((id "date")) "Date:" ,{input-string . => . user-date})
-	      (li ((id "duration")) "Duration:" ,{input-string . => . user-dur})
-	      (li ((id "location")) "Geo Location:" ,{input-string . => . user-geo})
-	      (li ((id "language")) "Language:" ,{input-string . => . user-lang})
-	      (li ((id "query")) "Query:" ,{input-string . => . user-query})
-	      (li ((id "user")) "User:" ,{input-string . => . user-user}))))
+	      (li ((id "output") (class "pull-right")) "Output File:     " ,{input-string . => . user-output})
+	      (li ((id "count") (class "pull-right")) "Count:     " ,{input-string . => . user-count})
+	      (li ((id "date") (class "pull-right")) "Date:     " ,{input-string . => . user-date})
+	      (li ((id "duration") (class "pull-right")) "Duration:     " ,{input-string . => . user-dur})
+	      (li ((id "location") (class "pull-right")) "Geo Location:     " ,{input-string . => . user-geo})
+	      (li ((id "language") (class "pull-right")) "Language:     " ,{input-string . => . user-lang})
+	      (li ((id "query") (class "pull-right")) "Query:     " ,{input-string . => . user-query})
+	      (li ((id "user") (class "pull-right")) "User:     " ,{input-string . => . user-user}))))
    (hash
     ;; 'auth (bytes->string/utf-8 user-auth)
     ;; 'config (bytes->string/utf-8 user-config)
@@ -197,7 +196,7 @@
 				   (class "btn btn-default")
 				   (id "menu-toggle")) "Toggle Menu")
 			       ;; all main page content goes here
-			       ,@body))))) 
+			       ,@body)))))
       (script ((src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")))
       (script ((src "/js/jquery.js")))
       (script ((src "/js/bootstrap.min.js")))
@@ -207,7 +206,7 @@
 ;;;               URL Handlers
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; This section contains the handlers for each "web page" of the
-;;; application 
+;;; application
 
 ;;; Main interface. The user is greeted with this page on startup at
 ;;; the root URL

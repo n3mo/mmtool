@@ -3,13 +3,24 @@ $("#menu-toggle").click(function(e) {
         $("#wrapper").toggleClass("toggled");
 });
 
+////////////////////////////////////////
+// removes select choice on reload
+////////////////////////////////////////
+$(window).unload(function() {
+  $("#output, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
+  $('select option').each(function() {
+    if ( $(this).val() > 0 ) {
+        $(this).remove();
+    }
+  });
+});
+
 //////////////////////////////////////////
 // Sets dynamic input for first page load
 //////////////////////////////////////////
 $(document).ready(function() {
     if ($("#task select option:selected").val() == 0) {
-      $("#output").removeClass("no-input");
-      $("#options p, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
+      $("#output, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
     }
 });
 
@@ -22,7 +33,7 @@ $(document).ready(function(){
       ["google-country-trends", "twitter-locations"] );
     if (optionText >= 0) {
       $("#output").removeClass("no-input");
-      $("#options p, #count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
+      $("#count, #date, #duration, #location, #language, #query, #user").addClass("no-input");
     }
  });
 });
@@ -36,7 +47,7 @@ $(document).ready(function(){
       ["tumblr-blog-info", "wikipedia-page-links", "wikipedia-search", "wikipedia-text", "web-text"] );
     if (optionText >= 0) {
       $("#query, #output").removeClass("no-input");
-      $("#options p, #count, #date, #duration, #location, #language, #user").addClass("no-input");
+      $("#count, #date, #duration, #location, #language, #user").addClass("no-input");
     }
  });
 });
@@ -50,7 +61,7 @@ $(document).ready(function(){
       ["tumblr-posts", "tumblr-tag"] );
     if (optionText >= 0) {
       $("#query, #count, #output").removeClass("no-input");
-      $("#options p, #date, #duration, #location, #language, #user").addClass("no-input");
+      $("#date, #duration, #location, #language, #user").addClass("no-input");
     }
  });
 });
@@ -64,7 +75,7 @@ $(document).ready(function(){
       ["twitter-followers", "twitter-friends"] );
     if (optionText >= 0) {
       $("#user, #output").removeClass("no-input");
-      $("#options p, #count, #date, #duration, #location, #language, #query").addClass("no-input");
+      $("#count, #date, #duration, #location, #language, #query").addClass("no-input");
     }
  });
 });
@@ -78,7 +89,7 @@ $(document).ready(function(){
       ["twitter-trends", "twitter-trends-nohash"] );
     if (optionText >= 0) {
       $("#location, #output").removeClass("no-input");
-      $("#options p, #count, #date, #duration, #language, #query, #user").addClass("no-input");
+      $("#count, #date, #duration, #language, #query, #user").addClass("no-input");
     }
  });
 });
@@ -92,7 +103,7 @@ $(document).ready(function(){
       ["wikipedia-views"] );
     if (optionText >= 0) {
       $("#query, #date, #output").removeClass("no-input");
-      $("#options p, #count, #duration, #location, #language, #user").addClass("no-input");
+      $("#count, #duration, #location, #language, #user").addClass("no-input");
     }
  });
 });
@@ -106,7 +117,7 @@ $(document).ready(function(){
       ["google-trends"] );
     if (optionText >= 0) {
       $("#date, #output").removeClass("no-input");
-      $("#options p, #count, #duration, #location, #language, #query, #user").addClass("no-input");
+      $("#count, #duration, #location, #language, #query, #user").addClass("no-input");
     }
  });
 });
@@ -120,7 +131,7 @@ $(document).ready(function(){
       ["twitter-sample"] );
     if (optionText >= 0) {
       $("#count, #duration, #output").removeClass("no-input");
-      $("#options p, #date, #location, #language, #query, #user").addClass("no-input");
+      $("#date, #location, #language, #query, #user").addClass("no-input");
     }
  });
 });
@@ -134,7 +145,7 @@ $(document).ready(function(){
       ["twitter-search"] );
     if (optionText >= 0) {
       $("#query, #count, #location, #language, #output").removeClass("no-input");
-      $("#options p, #date, #duration, #user").addClass("no-input");
+      $("#date, #duration, #user").addClass("no-input");
     }
  });
 });
@@ -148,7 +159,7 @@ $(document).ready(function(){
       ["twitter-stream"] );
     if (optionText >= 0) {
       $("#query, #user, #location, #language, #duration, #count, #output").removeClass("no-input");
-      $("#options p, #date").addClass("no-input");
+      $("#date").addClass("no-input");
     }
  });
 });
@@ -162,7 +173,7 @@ $(document).ready(function(){
       ["twitter-user"] );
     if (optionText >= 0) {
       $("#user, #count, #output").removeClass("no-input");
-      $("#options p, #date, #duration, #location, #language, #query").addClass("no-input");
+      $("#date, #duration, #location, #language, #query").addClass("no-input");
     }
  });
 });
