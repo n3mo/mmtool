@@ -5,7 +5,7 @@
 	 web-server/formlets
 	 web-server/page
 	 web-server/dispatch)
- 
+
 ;;; Runtime path. This is useful for locating bundled web server
 ;;; items, such as CSS files, etc.
 (define-runtime-path server-path "extras")
@@ -15,7 +15,7 @@
 (define active-data-file (make-parameter #f))
 
 ;; The system can support multiple URLs (disguised as tabs/panels
-;; within the "gui")  
+;; within the "gui")
 (define-values (mmtool-dispatch mmtool-url)
     (dispatch-rules
      [("") main-interface]
@@ -35,9 +35,10 @@
 
 ;;; List of tasks in a selection formlet
 (define mm-tasks-formlet
+	;;; I removed twitter-auth and tumblr-auth from this list
   (select-input '("google-country-trends" "google-trends"
-		  "tumblr-auth" "tumblr-blog-info" "tumblr-posts"
-		  "tumblr-tag" "twitter-auth" "twitter-followers"
+		  "tumblr-blog-info" "tumblr-posts"
+		  "tumblr-tag" "twitter-followers"
 		  "twitter-friends" "twitter-locations"
 		  "twitter-sample" "twitter-search" "twitter-stream"
 		  "twitter-trends" "twitter-trends-nohash"
@@ -77,23 +78,26 @@
 
 ;;; Command line input formlet
 (define CLI-formlet
-  (formlet
-   (div 
+	(formlet
+   (div ((class "col-lg-5"))
     (div ((id "task"))
-	 "Choose a task:" ,{mm-tasks-formlet . => . task})
+			"Choose a task:" ,{mm-tasks-formlet . => . task})
     (div ((id "options"))
-	 "Auth File:" ,{file-upload-formlet . => . user-auth}
-	 "Config File:" ,{file-upload-formlet . => . user-config}
-	 "Output File:" ,{input-string . => . user-output}
-	 "Count:" ,{input-string . => . user-count}
-	 "Date:" ,{input-string . => . user-date}
-	 "Duration:" ,{input-string . => . user-dur}
-	 "Geo Location:" ,{input-string . => . user-geo}
-	 "Language:" ,{input-string . => . user-lang}	 
-	 "Query:" ,{input-string . => . user-query}
-	 "User:" ,{input-string . => . user-user}))
-   (hash 'auth (bytes->string/utf-8 user-auth)
-	 'config (bytes->string/utf-8 user-config)
+	; "Auth File:" ,{file-upload-formlet . => . user-auth}
+	; "Config File:" ,{file-upload-formlet . => . user-config}
+			(p "This task requires no input. Submit Query")
+			(ul
+	 			(li ((id "output"))"Output File:" ,{input-string . => . user-output})
+	 			(li ((id "count")) "Count:" ,{input-string . => . user-count})
+	 			(li ((id "date")) "Date:" ,{input-string . => . user-date})
+	 			(li ((id "duration")) "Duration:" ,{input-string . => . user-dur})
+	 			(li ((id "location")) "Geo Location:" ,{input-string . => . user-geo})
+	 			(li ((id "language")) "Language:" ,{input-string . => . user-lang})
+	 			(li ((id "query")) "Query:" ,{input-string . => . user-query})
+	 			(li ((id "user")) "User:" ,{input-string . => . user-user}))))
+   (hash
+	;	 'auth (bytes->string/utf-8 user-auth)
+	; 'config (bytes->string/utf-8 user-config)
 	 'output user-output
 	 'count user-count 'date user-date 'dur user-dur 'geo user-geo
 	 'lang user-lang 'query user-query 'user user-user 'task task)))
@@ -127,15 +131,45 @@
    #:preamble #"<!DOCTYPE html>"
    `(html
      (head
-      (meta ((content "text/html; charset=UTF-8") (http-equiv "content-type"))) 
+			(meta ((charset "utf-8")))
+    	(meta ((http-equiv "X-UA-Compatible") (content "IE=edge")))
+    	(meta ((name "viewport") (content "width=device-width, initial-scale=1")))
       (title ,title)
-      (link ((href "/style.css") (rel "stylesheet") (type "text/css"))))
-     (body
-      (div ((id "header"))
-	   (a ((href "/")) "Main") " | "
-	   (a ((href "/collect")) "Collection") " | "
-	   (a ((href "/analysis")) "Analysis"))
-      ,@body))))
+			(link ((href "/css/bootstrap.min.css") (rel "stylesheet")))
+			(link ((href "/css/simple-sidebar.css") (rel "stylesheet")))
+			(link ((href "/font-awesome/css/font-awesome.min.css") (rel "stylesheet")))
+			(link ((href "/css/style.css") (rel "stylesheet"))))
+		 (body
+			;full page wrapper--allows side bar menu to shift all content
+			;move the closing parenthasis for it to above id=page-content-wrapper
+			;to cover page content instead of shifting it right
+			 (div ((id "wrapper"))
+			; sidebar
+			 	(div ((id "sidebar-wrapper"))
+			   	(ul ((class "sidebar-nav"))
+			     (li ((class "side-top"))
+       			 (h1 "mmtool")
+			       (a ((href "/")) "Main"))
+					 (li
+			       (a ((href "/collect")) "Collection"))
+					 (li
+			       (a ((href "/analysis")) "Analysis"))))
+			;page content wrapper
+			 (div ((id "page-content-wrapper"))
+			; (a ((href "#menu-toggle") (id "menu-toggle"))
+			; 	(i ((class "fa fa-bars") (style "font-size:x-large;"))))
+				(div ((class "container-fluid"))
+				 (div ((class "row"))
+					(div ((class "col-lg-12"))
+					(a ((href "#menu-toggle") (class "btn btn-default") (id "menu-toggle"))"Toggle Menu")
+					; all main page content goes here
+					,@body))))) ; <---move this last div closing to above page content wrapper
+			                 ;     to have menu cover page content rather than shift content
+				(script ((src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")))
+	 			(script ((src "/js/jquery.js")))
+	 			(script ((src "/js/bootstrap.min.js")))
+	 			(script ((src "/js/custom.js")))
+      ))))
 
 ;;; Main interface. The user is greeted with this page on startup
 (define (main-interface request)
@@ -208,7 +242,7 @@
      request))
   (send/suspend/dispatch response-generator))
 
-;;; An attempt at a web-server/templates-based approach. 
+;;; An attempt at a web-server/templates-based approach.
 ;;; Template for main page(s)
 ;; (define (default-template contents)
 ;;   (include-template "./templates/default.html"))
