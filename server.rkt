@@ -49,7 +49,7 @@
 
 ;;; This determines if massmine is correctly installed on the user's
 ;;; computer and sets the appropriate parameter at startup
-(when (find-executable-path "massmined")
+(when (find-executable-path "massmine")
     (let ([version (with-output-to-string
 		     (λ () (system "massmine --version")))])
       (massmine?
