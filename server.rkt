@@ -143,16 +143,29 @@
 ;;;         Analysis and Processing Dispatch
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; (define (tmp-hashtags)
+;;   '(table (tr (th "Hashtag") (th "Count"))
+;; 	  (tr (td "#Vegan") (td "11"))))
+
+;; Each analysis/processing task must be defined here. Each defined
+;; procedure must return an X-expression that can be embedded in our
+;; main-template
+(define (process-data-dispatch task)
+  (if (active-data-file)
+      (with-input-from-file (active-data-file)
+	(λ ()
+	  (cond
+	   [(equal? task "#hashtags") (GUI-hashtags)])))
+      ;; No active data file. Notify the user
+      `(p "You must select a data file before choosing an analysis task!")))
+
 ;;; Analysis dispatch. When the user selects an analysis/processing
 ;;; task, this function determines who to call
 (define (analysis-dispatch hsh)
-  ;; Each analysis/processing task must be defined here. Each defined
-  ;; procedure must return an X-expression that can be embedded in our
-  ;; main-template
-  ;;(define (hashtag-dispatch))
   (main-template
    "MassMine: Your Data Analysis"
-   `((p ,(string-append "Executed task: " (hash-ref hsh 'task))))))
+   `((p ,(string-append "Executed task: " (hash-ref hsh 'task)))
+     ,(process-data-dispatch (hash-ref hsh 'task)))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               HTML Templates

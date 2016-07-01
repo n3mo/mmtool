@@ -95,7 +95,9 @@
 	(loop (cons (usernames (hash-ref record 'text #f)) user-names)
 	      (read-json (current-input-port))))))
 
-;;; Call this to display hash-tags for the --hash-tags task
+;;; Call this to display hash-tags for the --hash-tags task. This
+;;; function is designed for printing out results during command line
+;;; usage. For GUI requests, use GUI-hashtags
 (define (display-hashtags)
   (let ([hash-tags (hash-ref (cache) 'hashtags #f)]
 	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
@@ -105,6 +107,17 @@
 		  (f hash-tags))
 	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
 		  (f (find-hashtags-by-record))))))
+
+;;; This is meant to be called by the GUI server only. It returns
+;;; hashtag results as an X-expression. It reads from the current
+;;; input port, which should be set to the user's data file
+(define (GUI-hashtags)
+  (let* ([f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+			  (λ (x y) (> (cdr x) (cdr y)))))]
+	 [result (f (find-hashtags-by-record))])
+    `(table (tr (th "Hashtag") (th "Frequency"))
+	    ,@(map (λ (x) `(tr (td ,(car x))
+			       (td ,(number->string (cdr x))))) result))))
 
 ;;; Call this to display @usernames for the --user-mentions task
 (define (display-user-mentions)
