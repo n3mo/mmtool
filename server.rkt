@@ -53,6 +53,7 @@
      [("") main-interface]
      [("collect") user-input-form]
      [("analysis") analysis-interface]
+     [("results") results-interface]
      ;;[else main-interface]
      ))
 
@@ -217,7 +218,8 @@
 			(h1 "mmtool")
 			(a ((href "/")) "Main"))
 		    (li (a ((href "/collect")) "Collection"))
-		    (li (a ((href "/analysis")) "Analysis"))))
+		    (li (a ((href "/analysis")) "Analysis"))
+		    (li (a ((href "/results")) "Results"))))
 	   ;; page content wrapper
 	   (div ((id "page-content-wrapper"))
 		;; (a ((href "#menu-toggle") (id "menu-toggle"))
@@ -247,7 +249,7 @@
   (main-template
    "MassMine: Your Data Analysis"
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
-     (p "Please choose an option above")
+     (p "Please choose an option")
      (div ((id "data-info"))
 	  ,(if (massmine?)
 	       `(div ((id "installed"))
@@ -293,6 +295,22 @@
     ;; (analysis-dispatch (formlet-process analysis-formlet request)))
     (analysis-dispatch (formlet-process analysis-formlet request)))
   (send/suspend/dispatch response-generator))
+
+;;; Results page. If the user has run an analysis, the result(s)
+;;; should be available here. For long-running analyses, the user can
+;;; be warned to check back here later to see if things have finished
+;;; up.
+(define (results-interface request)
+  (main-template
+   "MassMine: Your Data Analysis"
+   `((h1 "MassMine Data Analysis Results")
+     (p "The results of any analyses can be found below. For large
+data sets, it may take time for your results to appear here.")
+     (div ((id "results"))
+	  ,(if (gui-result)
+	       (gui-result)
+	       "No results found. If you are waiting on a long-running
+analysis, check back later.")))))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
