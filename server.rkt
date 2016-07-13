@@ -42,6 +42,13 @@
 ;;; massmine executable
 (define massmine? (make-parameter #f))
 
+;;; The results of each analysis task are stored in global variables
+;;; so that the user can revisit the result after navigating to other
+;;; resources in the application. These must be set! by analysis
+;;; threads
+(define hashtags-result #f)
+(define user-mentions-result #f)
+
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Dispatch
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -170,23 +177,49 @@
 ;; Each analysis/processing task must be defined here. Each defined
 ;; procedure must return an X-expression that can be embedded in our
 ;; main-template
+;; (define (process-data-dispatch gui-task)
+;;   (if (active-data-file)
+;;       (begin
+;; 	(cond
+;; 	 [(equal? gui-task "#hashtags") (task 'GUI-hashtags)]
+;; 	 [(equal? gui-task "@user-mentions") (task 'GUI-user-mentions)])
+;; 	(process-data (active-data-file)))
+;;       ;; No active data file. Notify the user
+;;       `(p "You must select a data file before choosing an analysis task!")))
+
+;;; This method starts a separate thread for each analysis task to
+;;; return control immediately to the web app.
 (define (process-data-dispatch gui-task)
-  (if (active-data-file)
-      (begin
-	(cond
-	 [(equal? gui-task "#hashtags") (task 'GUI-hashtags)]
-	 [(equal? gui-task "@user-mentions") (task 'GUI-user-mentions)])
-	(process-data (active-data-file)))
-      ;; No active data file. Notify the user
-      `(p "You must select a data file before choosing an analysis task!")))
+  (cond
+   [(equal? gui-task "#hashtags")
+    (task 'GUI-hashtags)
+    ;; Remove old results? If someone requests a task, we might
+    ;; consider removing any old results so that when they are
+    ;; redirected to the results page they don't incorrectly assume
+    ;; the old results are their new ones
+    ;; (set! hashtags-result #f)
+    (thread (λ () (set! hashtags-result (process-data (active-data-file)))))]
+   [(equal? gui-task "@user-mentions")
+    (task 'GUI-user-mentions)
+    (thread (λ () (set! user-mentions-result (process-data (active-data-file)))))])
+  ;; Analysis task is off and running. Redirect to the results page,
+  ;; which may or may not be ready, depending on how long the analysis
+  ;; takes. 
+  (results-interface (redirect/get)))
 
 ;;; Analysis dispatch. When the user selects an analysis/processing
 ;;; task, this function determines who to call
+;; (define (analysis-dispatch hsh)
+;;   (main-template
+;;    "MassMine: Your Data Analysis"
+;;    `((p ,(string-append "Executed task: " (hash-ref hsh 'task)))
+;;      ,(process-data-dispatch (hash-ref hsh 'task)))))
 (define (analysis-dispatch hsh)
-  (main-template
-   "MassMine: Your Data Analysis"
-   `((p ,(string-append "Executed task: " (hash-ref hsh 'task)))
-     ,(process-data-dispatch (hash-ref hsh 'task)))))
+  (if (active-data-file)
+      (process-data-dispatch (hash-ref hsh 'task))
+      (main-template
+       "MassMine: Your Data Analysis"
+       `((p "You must select a data file before choosing an analysis task!")))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               HTML Templates
@@ -292,7 +325,6 @@
       (formlet-process file-upload-formlet request)))
     (analysis-interface (redirect/get)))
   (define (analysis-handler request)
-    ;; (analysis-dispatch (formlet-process analysis-formlet request)))
     (analysis-dispatch (formlet-process analysis-formlet request)))
   (send/suspend/dispatch response-generator))
 
@@ -306,11 +338,18 @@
    `((h1 "MassMine Data Analysis Results")
      (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here.")
-     (div ((id "results"))
-	  ,(if (gui-result)
-	       (gui-result)
+     (h1 "#Hashtags")
+     (div ((id "hashtags-result"))
+	  ,(if hashtags-result
+	       hashtags-result
 	       "No results found. If you are waiting on a long-running
-analysis, check back later.")))))
+analysis, refresh this page later."))
+     (h1 "@User-mentions")
+     (div ((id "user-mentions-result"))
+	  ,(if user-mentions-result
+	       user-mentions-result
+	       "No results found. If you are waiting on a long-running
+analysis, refresh this page later.")))))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)

@@ -68,3 +68,13 @@ input[type=submit]{
 #results {
     border: 1px solid black;
 }
+
+#hashtags-result {
+    background-color: #F0F8FF;
+    border: 1px solid black;
+}
+
+#user-mentions-result {
+    background-color: #F0F8FF;
+    border: 1px solid black;
+}
