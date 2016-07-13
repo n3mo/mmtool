@@ -14,14 +14,33 @@
 ;;;               Parameters
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; The current file selected by the user for data analysis/processing
+;;; The current file selected by the user for data
+;;; analysis/processing. This acts as a parameter with make-parameter,
+;;; but using the local disk (in the user's cache) for managing the
+;;; information across threads (and instances). 
+
 (define active-data-file (make-parameter #f))
+
+;; (define (active-data-file [file-name #f])
+;;   (if file-name
+;;       ;; User has entered a file path for data analysis. Save the
+;;       ;; path.
+;;       (with-output-to-file (active-file-path)
+;; 	(λ () (write file-name))
+;; 	#:exists 'replace)
+;;       ;; No filename has been supplied. This is a request for the last
+;;       ;; active file path
+;;       (if (file-exists? (active-file-path))
+;; 	  (with-input-from-file (active-file-path)
+;; 	    (λ () (read)))
+;; 	  ;; No active file has ever existed. Return false
+;; 	  #f)))
+
 ;;; Is massmine installed and available on the user's path (as
 ;;; detected by mmtool?). We assume no, but check below. If installed,
 ;;; this parameter is set to the version number of the installed
 ;;; massmine executable
 (define massmine? (make-parameter #f))
-
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Dispatch
@@ -150,12 +169,12 @@
 ;; Each analysis/processing task must be defined here. Each defined
 ;; procedure must return an X-expression that can be embedded in our
 ;; main-template
-(define (process-data-dispatch task)
+(define (process-data-dispatch gui-task)
   (if (active-data-file)
-      (with-input-from-file (active-data-file)
-	(λ ()
-	  (cond
-	   [(equal? task "#hashtags") (GUI-hashtags)])))
+      (begin
+	(cond
+	 [(equal? gui-task "#hashtags") (task 'GUI-hashtags)])
+	(process-data (active-data-file)))
       ;; No active data file. Notify the user
       `(p "You must select a data file before choosing an analysis task!")))
 
@@ -270,6 +289,7 @@
       (formlet-process file-upload-formlet request)))
     (analysis-interface (redirect/get)))
   (define (analysis-handler request)
+    ;; (analysis-dispatch (formlet-process analysis-formlet request)))
     (analysis-dispatch (formlet-process analysis-formlet request)))
   (send/suspend/dispatch response-generator))
 
