@@ -14,6 +14,8 @@
 ;;; Control parameters --------------------------------------
 ;;; Location of cache files
 (define cache-dir (make-parameter (build-path (current-directory) "mm-cache")))
+;;; Active data file (persists across threads and instances of mmtool
+(define active-file-path (make-parameter (build-path (cache-dir) "adf")))
 ;;; Meta cache file. Contains IDs for currently cached objects. 
 (define cache-meta-file (make-parameter (build-path (cache-dir) "cache")))
 ;;; Contents of cache items appear in this file
@@ -28,7 +30,7 @@
 ;;; Use the cache? If the file has changed since the last run, we
 ;;; should recompute any requested tasks
 (define use-cache? (make-parameter #t))
-;;; If the cache gets updated by antying, we must save it before
+;;; If the cache gets updated by anything, we must save it before
 ;;; exiting the program. Anything that updates the cache should set
 ;;; this to #t
 (define save-cache? (make-parameter #f))
@@ -50,6 +52,11 @@
 ;;; mmtool can work with piped data, or with a specific file. By
 ;;; default, it assumes a file.
 (define from-file? (make-parameter #t))
+;;; Is mmtool running as a gui?
+(define gui? (make-parameter #f))
+;;; When running in GUI mode, results (typically X-expressions) are
+;;; saved into this parameter for passing back to the web server
+(define gui-result (make-parameter #f))
 
 (define (hashtags record)
   (if (not (string? record))
@@ -112,12 +119,20 @@
 ;;; hashtag results as an X-expression. It reads from the current
 ;;; input port, which should be set to the user's data file
 (define (GUI-hashtags)
-  (let* ([f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
-			  (λ (x y) (> (cdr x) (cdr y)))))]
-	 [result (f (find-hashtags-by-record))])
-    `(table (tr (th "Hashtag") (th "Frequency"))
-	    ,@(map (λ (x) `(tr (td ,(car x))
-			       (td ,(number->string (cdr x))))) result))))
+  (let ([hash-tags (hash-ref (cache) 'hashtags #f)]
+	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+			 (λ (x y) (> (cdr x) (cdr y)))))])
+    (if (and (use-cache?) hash-tags)
+	;; Use cached data
+	`(table (tr (th "Hashtag") (th "Frequency"))
+		,@(map (λ (x) `(tr (td ,(car x))
+				   (td ,(number->string (cdr x)))))
+		       (f hash-tags)))
+	;; No cache. Calculate using raw data
+	`(table (tr (th "Hashtag") (th "Frequency"))
+		,@(map (λ (x) `(tr (td ,(car x))
+				   (td ,(number->string (cdr x)))))
+		       (f (find-hashtags-by-record)))))))
 
 ;;; Call this to display @usernames for the --user-mentions task
 (define (display-user-mentions)
@@ -136,12 +151,14 @@
 ;;; on the user's command line argument(s)
 (define (task-dispatch)
   (cond
-   [(equal? (task) 'gui) (start-gui)]
+   ;; [(equal? (task) 'gui) (begin (gui? #t) (start-gui))]
    [(equal? (task) 'hash-tags) (display-hashtags)]
    [(equal? (task) 'user-mentions) (display-user-mentions)]
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
-   [else (start-gui)]))
+   [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
+   ;; [else (begin (gui? #t) (start-gui))]
+   ))
 
 ;;; Load cache meta-data. If the cache meta file doesn't exist, create
 ;;; it.
@@ -228,7 +245,7 @@
    #:program "mmtool"
    ;; #:once-each
    #:once-any
-   [("--gui") "Run graphical user interface" (task 'gui)]
+   [("--gui") "Run graphical user interface" (gui? #t)]
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
    ;; [("--anonymize") "Anonymize @usernames" (task 'anonymize)]
@@ -261,8 +278,23 @@
   (cond
    ;; No filename was supplied at runtime. Assume piped data stream
    [(null? data-file) (task-dispatch)]
+   ;; We're running as a GUI. That means we must catch the result
+   ;; (probably in X-expression format) for displaying through the
+   ;; web server
+   [(gui?)
+    (gui-result
+     (with-input-from-file data-file (λ () (task-dispatch))))]
+   ;; File supplied from command line
    [(file-exists? data-file) (with-input-from-file data-file (λ () (task-dispatch)))]
    [else (printf "Error: File ~a does not exist\n" data-file)])
+
+  ;; Debug
+  ;; (displayln (cache-file))
+  ;; (displayln (cache-meta-file))
+  ;; (printf "Save cache?: ~a\n" (if (save-cache?) "True" "False"))
+  ;; (printf "Update cache?: ~a\n" (if (update-cache?) "True" "False"))
+  ;; (printf "Data file: ~a\n" data-file)
+  ;; (printf "Null data file?: ~a" (if (null? data-file) "True" "False"))
 
   ;; If anything has changed the cache, save it now
   (when (save-cache?) (write-cache) (write-cache-meta))
@@ -271,7 +303,14 @@
   (when (and (cache-results?) (update-cache?))
     (hash-set! (cache-meta) (cache-key)
 	       (file-or-directory-modify-seconds data-file))
-    (write-cache-meta)))
+    (write-cache-meta))
+
+  ;; If this was called by the GUI (this is different than the user
+  ;; calling the gui from the command line), then we need to return
+  ;; the analysis result for passing to the web server
+  (when (gui?) (gui-result)))
 
 ;;; Go!
-(process-data filename)
+(if (gui?)
+    (start-gui)
+    (process-data filename))
