@@ -173,7 +173,8 @@
   (if (active-data-file)
       (begin
 	(cond
-	 [(equal? gui-task "#hashtags") (task 'GUI-hashtags)])
+	 [(equal? gui-task "#hashtags") (task 'GUI-hashtags)]
+	 [(equal? gui-task "@user-mentions") (task 'GUI-user-mentions)])
 	(process-data (active-data-file)))
       ;; No active data file. Notify the user
       `(p "You must select a data file before choosing an analysis task!")))

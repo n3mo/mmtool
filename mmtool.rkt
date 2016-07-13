@@ -145,6 +145,24 @@
 	(for-each (λ (x) (printf "~a: ~a\n" (car x) (cdr x)))
 		  (f (find-usernames-by-record))))))
 
+;;; This is meant to be called by the GUI server only. It returns
+;;; @user-mentions results as an X-expression. It reads from the
+;;; current input port, which should be set to the user's data file
+(define (GUI-user-mentions)
+  (let ([user-names (hash-ref (cache) 'usernames #f)]
+	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+			 (λ (x y) (> (cdr x) (cdr y)))))])
+    (if (and (use-cache?) user-names)
+	;; Use cached data
+	`(table (tr (th "User Name") (th "Frequency"))
+		,@(map (λ (x) `(tr (td ,(car x))
+				   (td ,(number->string (cdr x)))))
+		       (f user-names)))
+	;; No cache. Calculate using raw data
+	`(table (tr (th "User Name") (th "Frequency"))
+		,@(map (λ (x) `(tr (td ,(car x))
+				   (td ,(number->string (cdr x)))))
+		       (f (find-usernames-by-record)))))))
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
@@ -157,6 +175,7 @@
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
    [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
+   [(equal? (task) 'GUI-user-mentions) (GUI-user-mentions)]
    ;; [else (begin (gui? #t) (start-gui))]
    ))
 
