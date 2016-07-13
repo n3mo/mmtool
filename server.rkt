@@ -49,6 +49,16 @@
 (define hashtags-result #f)
 (define user-mentions-result #f)
 
+;;; Each analysis task runs in its own thread. Because nothing
+;;; visually happens while an analysis task is running, it would be
+;;; useful to provide visual confirmation to the user that a thread is
+;;; running. Each task has its own aptly-named thread. Use
+;;; (thread-running? <thread>) to see if things are still running. If
+;;; so, this should be highlighted on the results page (or somewhere)
+(define hashtags-thread (make-parameter #f))
+(define user-mentions-thread (make-parameter #f))
+
+
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Dispatch
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -198,10 +208,12 @@
     ;; redirected to the results page they don't incorrectly assume
     ;; the old results are their new ones
     ;; (set! hashtags-result #f)
-    (thread (λ () (set! hashtags-result (process-data (active-data-file)))))]
+    (hashtags-thread
+     (thread (λ () (set! hashtags-result (process-data (active-data-file))))))]
    [(equal? gui-task "@user-mentions")
     (task 'GUI-user-mentions)
-    (thread (λ () (set! user-mentions-result (process-data (active-data-file)))))])
+    (user-mentions-thread
+     (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))])
   ;; Analysis task is off and running. Redirect to the results page,
   ;; which may or may not be ready, depending on how long the analysis
   ;; takes. 
@@ -339,12 +351,18 @@
      (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here.")
      (h1 "#Hashtags")
+     ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
+	  "THIS TASK IS STILL RUNNING"
+	  "")
      (div ((id "hashtags-result"))
 	  ,(if hashtags-result
 	       hashtags-result
 	       "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
      (h1 "@User-mentions")
+     ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
+	  "THIS TASK IS STILL RUNNING"
+	  "")
      (div ((id "user-mentions-result"))
 	  ,(if user-mentions-result
 	       user-mentions-result
