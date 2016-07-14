@@ -16,15 +16,18 @@ Creating a one-size-fits-all analysis tool for social media and web data researc
 * Visual, web-browser interface for running MassMine and working with the resulting data.
 * And more!
 
+## Caching by default
+
+MassMine provides data in line-oriented JSON format. `mmtool` will work with arbitrarily large JSON files by employing line-by-line based algorithms (as opposed to reading an entire data set into RAM). To avoid parsing data files more than necessary, and for additional speed up, `mmtool` will utilize a cache for complex and slow-to-calculate algorithms. This cache will be used to not only avoid calculating the same expensive task more than once, but will also be shared across analyses and tasks to ensure that each sub-routine calculates the minimum necessary to build upon what came before. For very large data sets, waiting is a given. But you shouldn't need to wait twice!
+
+## Screenshots
+mmtool is not yet visually polished. However, the software is currently working, and the following screenshots give a sneak peek:
+
 mmtool also provides a JSON data viewer to allow the user to visually inspect their "raw" data
 ![Data Viewer](https://github.com/n3mo/mmtool/raw/master/img/data-viewer.png)
 
 Analysis routines are individually threaded, and status information and results are available asynchronously at all times:
 ![Analysis Results](https://github.com/n3mo/mmtool/raw/master/img/results.png)
-
-## Caching by default
-
-MassMine provides data in line-oriented JSON format. `mmtool` will work with arbitrarily large JSON files by employing line-by-line based algorithms (as opposed to reading an entire data set into RAM). To avoid parsing data files more than necessary, and for additional speed up, `mmtool` will utilize a cache for complex and slow-to-calculate algorithms. This cache will be used to not only avoid calculating the same expensive task more than once, but will also be shared across analyses and tasks to ensure that each sub-routine calculates the minimum necessary to build upon what came before. For very large data sets, waiting is a given. But you shouldn't need to wait twice!
 
 # License
 
