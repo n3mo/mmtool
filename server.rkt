@@ -404,7 +404,10 @@ analysis, refresh this page later."))))))
   (main-template
    "MassMine: Your Data Analysis"
    `((h1 "Data Viewer")
-     ,@(if (active-data-file)
+     (p "For optimum browser performance, JSON data beyond 500 entries
+is truncated.")
+     ,@(if (and (active-data-file)
+		(not (string=? (active-data-file) "")))
 	  `((pre ((id "json-renderer")))
 	    (script
 	     ([type "text/javascript"])
@@ -413,11 +416,9 @@ analysis, refresh this page later."))))))
 	       #f
 	       (string-append
 		"var json = "
-		;; (file->string (active-data-file))
-		(with-input-from-file (active-data-file)
-		  (λ () (json-lines->json-array)))
+			(with-input-from-file (active-data-file)
+		  (λ () (json-lines->json-array #:head 500)))
 		";\n"
-		;; (file->string (active-data-file))
 		"$('#json-renderer').jsonViewer(json, {collapsed: true});"))))
 	  `((p "You must first select a data file"))))))
 
