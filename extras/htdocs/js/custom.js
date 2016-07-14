@@ -39,12 +39,12 @@ $(document).ready(function(){
 });
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// tasks: tumblr-blog-info, wikipedia-page-links, wikipedia-search, wikipedia-text, web-text
+// tasks: tumblr-blog-info, wikipedia-page-links, wikipedia-search, web-text
 //////////////////////////////////////////////////////////////////////////////////////////////
 $(document).ready(function(){
  $('#task select').change(function() {
     var optionText = jQuery.inArray($("#task select option:selected").text(),
-      ["tumblr-blog-info", "wikipedia-page-links", "wikipedia-search", "wikipedia-text", "web-text"] );
+      ["tumblr-blog-info", "wikipedia-page-links", "wikipedia-search", "web-text"] );
     if (optionText >= 0) {
       $("#query, #output").removeClass("no-input");
       $("#count, #date, #duration, #location, #language, #user").addClass("no-input");
@@ -102,8 +102,22 @@ $(document).ready(function(){
     var optionText = jQuery.inArray($("#task select option:selected").text(),
       ["wikipedia-views"] );
     if (optionText >= 0) {
-      $("#query, #date, #output").removeClass("no-input");
-      $("#count, #duration, #location, #language, #user").addClass("no-input");
+      $("#query, #date, #language, #output").removeClass("no-input");
+      $("#count, #duration, #location, #user").addClass("no-input");
+    }
+ });
+});
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// tasks: wikipedia-text
+//////////////////////////////////////////////////////////////////////////////////////////////
+$(document).ready(function(){
+ $('#task select').change(function() {
+    var optionText = jQuery.inArray($("#task select option:selected").text(),
+      ["wikipedia-text"] );
+    if (optionText >= 0) {
+      $("#query, #language, #output").removeClass("no-input");
+      $("#count, #date, #duration, #location, #user").addClass("no-input");
     }
  });
 });
