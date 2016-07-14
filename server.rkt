@@ -46,6 +46,7 @@
 ;;; so that the user can revisit the result after navigating to other
 ;;; resources in the application. These must be set! by analysis
 ;;; threads
+(define massmine-result #f)
 (define hashtags-result #f)
 (define user-mentions-result #f)
 
@@ -55,6 +56,7 @@
 ;;; running. Each task has its own aptly-named thread. Use
 ;;; (thread-running? <thread>) to see if things are still running. If
 ;;; so, this should be highlighted on the results page (or somewhere)
+(define massmine-thread (make-parameter #f))
 (define hashtags-thread (make-parameter #f))
 (define user-mentions-thread (make-parameter #f))
 
@@ -351,10 +353,25 @@
      (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here.")
      (div 
+      ;; Data collection task
+      (h1 "Data Collection  "
+	  ,(if (and (massmine-thread) (thread-running? (massmine-thread)))
+	       `(a ((href "/results"))
+		   (i ((class "fa fa-refresh fa-spin")
+		       (style "font-size:30px"))))
+	       ""))
+      (button ((class "fold_massmine")) "Show/Hide")
+      (div ((id "massmine-result"))
+	   ,(if massmine-result
+		`(pre ,massmine-result)
+		"No results found. If you are waiting on a long-running
+analysis, refresh this page later."))
+      ;; #Hashtags task
       (h1 "#Hashtags  "
 	  ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
-	       `(i ((class "fa fa-refresh fa-spin")
-		    (style "font-size:30px")))
+	       `(a ((href "/results"))
+		   (i ((class "fa fa-refresh fa-spin")
+		       (style "font-size:30px"))))
 	       ""))
       (button ((class "fold_hashtags")) "Show/Hide")
       (div ((id "hashtags-result"))
@@ -362,11 +379,12 @@ data sets, it may take time for your results to appear here.")
 		hashtags-result
 		"No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
-      
+      ;; @user-mentions task
       (h1 "@User-mentions  "
 	  ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
-	       `(i ((class "fa fa-refresh fa-spin")
-		    (style "font-size:30px")))
+	       `(a ((href "/results"))
+		   (i ((class "fa fa-refresh fa-spin")
+		       (style "font-size:30px"))))
 	       ""))
       (button ((class "fold_user_mentions")) "Show/Hide")
       (div ((id "user-mentions-result"))
@@ -376,14 +394,19 @@ analysis, refresh this page later."))
 analysis, refresh this page later."))))))
 
 ;;; Confirm the user's request
-(define (confirm-user-input input-command request)
-  (let* ((cmd (build-mm-command input-command)))
-    (main-template
-     "MassMine: Your Data Analysis"
-     `((p ,(string-append "Command received: " cmd))
-       (p "Results of command execution")
-       (div ((id "results"))
-	    (pre ,(run-user-command cmd)))))))
+;; (define (confirm-user-input input-command request)
+;;   (let* ((cmd (build-mm-command input-command)))
+;;     (main-template
+;;      "MassMine: Your Data Analysis"
+;;      `((p ,(string-append "Command received: " cmd))
+;;        (p "Results of command execution")
+;;        (div ((id "results"))
+;; 	    (pre ,(run-user-command cmd)))))))
+(define (confirm-user-input input-command)
+  (let ((cmd (build-mm-command input-command)))
+    (massmine-thread
+     (thread (λ () (set! massmine-result (run-user-command cmd)))))
+    (results-interface (redirect/get))))
 
 ;;; The MassMine command builder page at "/collect"
 (define (user-input-form request)
@@ -405,8 +428,7 @@ analysis, refresh this page later."))))))
 	     (input ([type "submit"]))))))
   (define (user-command-handler request)
     (confirm-user-input
-     (formlet-process CLI-formlet request)
-     request))
+     (formlet-process CLI-formlet request)))
   (send/suspend/dispatch response-generator))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
