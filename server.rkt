@@ -351,26 +351,29 @@
      (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here.")
      (div 
-      (h1 "#Hashtags")
-      ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
-	   "THIS TASK IS STILL RUNNING"
-	   "")
+      (h1 "#Hashtags  "
+	  ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
+	       `(i ((class "fa fa-refresh fa-spin")
+		    (style "font-size:30px")))
+	       ""))
+      (button ((class "fold_hashtags")) "Show/Hide")
       (div ((id "hashtags-result"))
 	   ,(if hashtags-result
 		hashtags-result
 		"No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
-      (button ((class "fold_hashtags")) "Show/Hide")
-      (h1 "@User-mentions")
-      ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
-	   "THIS TASK IS STILL RUNNING"
-	   "")
+      
+      (h1 "@User-mentions  "
+	  ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
+	       `(i ((class "fa fa-refresh fa-spin")
+		    (style "font-size:30px")))
+	       ""))
+      (button ((class "fold_user_mentions")) "Show/Hide")
       (div ((id "user-mentions-result"))
 	   ,(if user-mentions-result
 		user-mentions-result
 		"No results found. If you are waiting on a long-running
-analysis, refresh this page later."))
-      (button ((class "fold_user_mentions")) "Show/Hide")))))
+analysis, refresh this page later."))))))
 
 ;;; Confirm the user's request
 (define (confirm-user-input input-command request)
