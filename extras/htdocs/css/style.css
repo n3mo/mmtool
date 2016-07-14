@@ -71,10 +71,14 @@ input[type=submit]{
 
 #hashtags-result {
     background-color: #F0F8FF;
-    border: 1px solid black;
+    height: 500px;
+    overflow: scroll;
+    display: none;
 }
 
 #user-mentions-result {
     background-color: #F0F8FF;
-    border: 1px solid black;
+    height: 500px;
+    overflow: scroll;
+    display: none;
 }

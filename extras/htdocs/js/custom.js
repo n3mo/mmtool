@@ -177,3 +177,11 @@ $(document).ready(function(){
     }
  });
 });
+
+$('.fold_hashtags').click(function() {
+    $('#hashtags-result').toggle(500)
+})
+
+$('.fold_user_mentions').click(function() {
+    $('#user-mentions-result').toggle(500)
+})
