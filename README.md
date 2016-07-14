@@ -4,7 +4,7 @@ This repo is not yet fit for public consumption. In time, this will grow into a 
 
 ## Features (coming soon)
 
-Creating a one-size-fits-all analysis tool for social media and web data research is a tall, and likely impossible endeavor. However, some tasks are common to many goals, and this tool will attempt to accomplish at least the following. `mmtool` will provide:
+Creating a one-size-fits-all analysis tool for social media and web data research is a tall, and likely impossible endeavor. However, some tasks are common to many goals, and this tool will attempt to accomplish at least the following:
 
 * Data cleaning. For example, it will remove bad data (e.g., deleted tweets returned from Twitter), fix character encoding issues, etc.
 * Data anonymization, to the extent possible. For example, across a given data set, @usernames can be consistently replaced with @1234 codes to minimize privacy risks while still providing a means for studying the interactions between networks of friends/users.
@@ -15,6 +15,12 @@ Creating a one-size-fits-all analysis tool for social media and web data researc
 * Filtering/removal of unnecessary data fields in MassMine JSON. MassMine returns a lot of information. You probably don't need it all. Reduce your data's file size by filtering out the chaff from the wheat. 
 * Visual, web-browser interface for running MassMine and working with the resulting data.
 * And more!
+
+mmtool also provides a JSON data viewer to allow the user to visually inspect their "raw" data
+![Data Viewer](https://github.com/n3mo/mmtool/raw/master/img/data-viewer.png)
+
+Analysis routines are individually threaded, and status information and results are available asynchronously at all times:
+![Analysis Results](https://github.com/n3mo/massmine/raw/master/img/results.png)
 
 ## Caching by default
 
