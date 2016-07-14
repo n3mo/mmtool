@@ -124,12 +124,14 @@
 			 (λ (x y) (> (cdr x) (cdr y)))))])
     (if (and (use-cache?) hash-tags)
 	;; Use cached data
-	`(table (tr (th "Hashtag") (th "Frequency"))
+	`(table ((class "table table-striped table-hover"))
+		(tr (th "Hashtag") (th "Frequency"))
 		,@(map (λ (x) `(tr (td ,(car x))
 				   (td ,(number->string (cdr x)))))
 		       (f hash-tags)))
 	;; No cache. Calculate using raw data
-	`(table (tr (th "Hashtag") (th "Frequency"))
+	`(table ((class "table table-striped table-hover"))
+		(tr (th "Hashtag") (th "Frequency"))
 		,@(map (λ (x) `(tr (td ,(car x))
 				   (td ,(number->string (cdr x)))))
 		       (f (find-hashtags-by-record)))))))
@@ -154,12 +156,14 @@
 			 (λ (x y) (> (cdr x) (cdr y)))))])
     (if (and (use-cache?) user-names)
 	;; Use cached data
-	`(table (tr (th "User Name") (th "Frequency"))
+	`(table ((class "table table-striped table-hover"))
+		(tr (th "User Name") (th "Frequency"))
 		,@(map (λ (x) `(tr (td ,(car x))
 				   (td ,(number->string (cdr x)))))
 		       (f user-names)))
 	;; No cache. Calculate using raw data
-	`(table (tr (th "User Name") (th "Frequency"))
+	`(table ((class "table table-striped table-hover"))
+		(tr (th "User Name") (th "Frequency"))
 		,@(map (λ (x) `(tr (td ,(car x))
 				   (td ,(number->string (cdr x)))))
 		       (f (find-usernames-by-record)))))))
