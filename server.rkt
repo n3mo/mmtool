@@ -316,7 +316,7 @@
   (define (response-generator embed/url)
     (main-template
      "MassMine: Your Data Analysis"
-     `((h1 "Data Processing and Analysis Entrypoint")
+     `((h1 "Data Processing and Analysis")
        (form ([action
 	       ,(embed/url analysis-handler)])
 	     ,@(formlet-display analysis-formlet)
@@ -354,9 +354,10 @@
 (define (results-interface request)
   (main-template
    "MassMine: Your Data Analysis"
-   `((h1 "MassMine Data Analysis Results")
+   `((h1 "Data Collection & Analysis Results")
      (p "The results of any analyses can be found below. For large
-data sets, it may take time for your results to appear here.")
+data sets, it may take time for your results to appear here on the
+first run.")
      (div 
       ;; Data collection task
       (h1 "Data Collection  "
@@ -404,33 +405,21 @@ analysis, refresh this page later."))))))
    "MassMine: Your Data Analysis"
    `((h1 "Data Viewer")
      ,@(if (active-data-file)
-	  `((p "Here's your data file's contents!")
-	    (pre ((id "json-renderer")))
+	  `((pre ((id "json-renderer")))
 	    (script
 	     ([type "text/javascript"])
 	     ,(make-cdata
 	       #f
 	       #f
 	       (string-append
-		"var json = ["
-		(file->string (active-data-file))
-		"];\n"
+		"var json = "
 		;; (file->string (active-data-file))
-		"$('#json-renderer').jsonViewer(json);"))))
+		(with-input-from-file (active-data-file)
+		  (λ () (json-lines->json-array)))
+		";\n"
+		;; (file->string (active-data-file))
+		"$('#json-renderer').jsonViewer(json, {collapsed: true});"))))
 	  `((p "You must first select a data file"))))))
-;; (define (viewer-interface request)
-;;   (main-template
-;;    "MassMine: Your Data Analysis"
-;;    `((h1 "Data Viewer")
-;;      ;; ,@(if (active-data-file)
-;;      ,@(if #t
-;; 	  `((p "Here's your data file's contents!")
-;; 	    (pre ((id "json-renderer")))
-;; 	    (script
-;; 	     ([type "text/javascript"])
-;; 	     ,(let ([data (file->string "small.json")])
-;; 		(include-template "json-viewer.js"))))
-;; 	  `((p "You must first select a data file"))))))
 
 ;;; Confirm the user's request
 ;; (define (confirm-user-input input-command request)

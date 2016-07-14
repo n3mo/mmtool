@@ -58,6 +58,20 @@
 ;;; saved into this parameter for passing back to the web server
 (define gui-result (make-parameter #f))
 
+;;; This function reads line-oriented JSON (as output by massmine),
+;;; and packages it into an array. This isn't how we want to do
+;;; business for analysis (as we must read the entire file into
+;;; memory). But this is useful for arranging our data properly for
+;;; the JSON viewer in the GUI app
+(define (json-lines->json-array)
+  (let loop ([json-array '()]
+	     [record (read-json (current-input-port))])
+    (if (eof-object? record)
+	(jsexpr->string json-array)
+	(loop (cons record json-array)
+	      (read-json (current-input-port))))))
+
+
 (define (hashtags record)
   (if (not (string? record))
       '()
