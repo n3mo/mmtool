@@ -90,3 +90,8 @@ input[type=submit]{
     overflow: scroll;
     display: none;
 }
+
+pre#json-renderer {
+  border: 1px solid #aaa;
+  padding: 0.5em 1.5em;
+}

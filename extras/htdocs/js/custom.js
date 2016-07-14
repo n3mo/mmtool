@@ -194,3 +194,4 @@ $('.fold_hashtags').click(function() {
 $('.fold_user_mentions').click(function() {
     $('#user-mentions-result').toggle(500)
 })
+

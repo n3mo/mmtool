@@ -4,7 +4,8 @@
          web-server/servlet-env
 	 web-server/formlets
 	 web-server/page
-	 web-server/dispatch)
+	 web-server/dispatch
+	 xml)
 
 ;;; Runtime path. This is useful for locating bundled web server
 ;;; items, such as CSS files, JS files, etc.
@@ -73,6 +74,7 @@
      [("collect") user-input-form]
      [("analysis") analysis-interface]
      [("results") results-interface]
+     [("viewer") viewer-interface]
      ;;[else main-interface]
      ))
 
@@ -252,7 +254,11 @@
       (link ((href "/css/bootstrap.min.css") (rel "stylesheet")))
       (link ((href "/css/simple-sidebar.css") (rel "stylesheet")))
       (link ((href "/font-awesome/css/font-awesome.min.css") (rel "stylesheet")))
-      (link ((href "/css/style.css") (rel "stylesheet"))))
+      (link ((href "/css/style.css") (rel "stylesheet")))
+      (link ((href "/css/jquery.json-viewer.css") (rel "stylesheet")))
+      (script ((src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")))
+      (script ((src "/js/jquery.js")))      
+      (script ((src "/js/jquery.json-viewer.js"))))
      (body
       ;; full page wrapper--allows side bar menu to shift all content
       ;; move the closing parenthasis for it to above id=page-content-wrapper
@@ -265,6 +271,7 @@
 			(h1 "mmtool")
 			(a ((href "/")) "Main"))
 		    (li (a ((href "/collect")) "Collection"))
+		    (li (a ((href "/viewer")) "Data Viewer"))
 		    (li (a ((href "/analysis")) "Analysis"))
 		    (li (a ((href "/results")) "Results"))))
 	   ;; page content wrapper
@@ -278,11 +285,9 @@
 				   (class "btn btn-default")
 				   (id "menu-toggle")) "Toggle Menu")
 			       ;; all main page content goes here
-			       ,@body)))))
-      (script ((src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")))
-      (script ((src "/js/jquery.js")))
-      (script ((src "/js/bootstrap.min.js")))
-      (script ((src "/js/custom.js")))))))
+			       ,@body))))
+	   (script ((src "/js/bootstrap.min.js")))
+	   (script ((src "/js/custom.js"))))))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Handlers
@@ -392,6 +397,40 @@ analysis, refresh this page later."))
 		user-mentions-result
 		"No results found. If you are waiting on a long-running
 analysis, refresh this page later."))))))
+
+;;; This is our JSON data view URL
+(define (viewer-interface request)
+  (main-template
+   "MassMine: Your Data Analysis"
+   `((h1 "Data Viewer")
+     ,@(if (active-data-file)
+	  `((p "Here's your data file's contents!")
+	    (pre ((id "json-renderer")))
+	    (script
+	     ([type "text/javascript"])
+	     ,(make-cdata
+	       #f
+	       #f
+	       (string-append
+		"var json = ["
+		(file->string (active-data-file))
+		"];\n"
+		;; (file->string (active-data-file))
+		"$('#json-renderer').jsonViewer(json);"))))
+	  `((p "You must first select a data file"))))))
+;; (define (viewer-interface request)
+;;   (main-template
+;;    "MassMine: Your Data Analysis"
+;;    `((h1 "Data Viewer")
+;;      ;; ,@(if (active-data-file)
+;;      ,@(if #t
+;; 	  `((p "Here's your data file's contents!")
+;; 	    (pre ((id "json-renderer")))
+;; 	    (script
+;; 	     ([type "text/javascript"])
+;; 	     ,(let ([data (file->string "small.json")])
+;; 		(include-template "json-viewer.js"))))
+;; 	  `((p "You must first select a data file"))))))
 
 ;;; Confirm the user's request
 ;; (define (confirm-user-input input-command request)
