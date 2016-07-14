@@ -20,7 +20,7 @@ mmtool also provides a JSON data viewer to allow the user to visually inspect th
 ![Data Viewer](https://github.com/n3mo/mmtool/raw/master/img/data-viewer.png)
 
 Analysis routines are individually threaded, and status information and results are available asynchronously at all times:
-![Analysis Results](https://github.com/n3mo/massmine/raw/master/img/results.png)
+![Analysis Results](https://github.com/n3mo/mmtool/raw/master/img/results.png)
 
 ## Caching by default
 
