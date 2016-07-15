@@ -255,7 +255,12 @@
 	(div
 	 ,(if (active-data-file)
 	      (active-data-file) "<none selected>"))
-	(br)))
+	;; (br)
+	;; (form ([action
+	;; 	,(embed/url file-select-handler)])
+	;;       ,@(formlet-display file-upload-formlet)
+	;;       (input ([type "submit"])))
+	))
 
 ;;; System settings modal
 (define (settings-modal)
@@ -350,10 +355,17 @@
 ;;; Main interface. The user is greeted with this page on startup at
 ;;; the root URL
 (define (main-interface request)
-  (main-template
-   "MassMine: Your Data Analysis"
-   `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
-     (p "Please choose an option"))))
+  (define (response-generator embed/url)
+    (main-template
+     "MassMine: Your Data Analysis"
+     `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
+       (p "Please choose an option"))))
+  (define (file-select-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
+  (send/suspend/dispatch response-generator))
 
 ;;; Entry point for data analysis/cleaning/exporting/etc. found at "/analysis"
 (define (analysis-interface request)
@@ -389,75 +401,89 @@
 ;;; be warned to check back here later to see if things have finished
 ;;; up.
 (define (results-interface request)
-  (main-template
-   "MassMine: Your Data Analysis"
-   `((h1 "Data Collection & Analysis Results")
-     (p "The results of any analyses can be found below. For large
+  (define (response-generator embed/url)
+    (main-template
+     "MassMine: Your Data Analysis"
+     `((h1 "Data Collection & Analysis Results")
+       (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here on the
 first run.")
-     (div 
-      ;; Data collection task
-      (h1 "Data Collection  "
-	  ,(if (and (massmine-thread) (thread-running? (massmine-thread)))
-	       `(a ((href "/results"))
-		   (i ((class "fa fa-refresh fa-spin")
-		       (style "font-size:30px"))))
-	       ""))
-      (button ((class "fold_massmine")) "Show/Hide")
-      (div ((id "massmine-result"))
-	   ,(if massmine-result
-		`(pre ,massmine-result)
-		"No results found. If you are waiting on a long-running
+       (div 
+	;; Data collection task
+	(h1 "Data Collection  "
+	    ,(if (and (massmine-thread) (thread-running? (massmine-thread)))
+		 `(a ((href "/results"))
+		     (i ((class "fa fa-refresh fa-spin")
+			 (style "font-size:30px"))))
+		 ""))
+	(button ((class "fold_massmine")) "Show/Hide")
+	(div ((id "massmine-result"))
+	     ,(if massmine-result
+		  `(pre ,massmine-result)
+		  "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
-      ;; #Hashtags task
-      (h1 "#Hashtags  "
-	  ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
-	       `(a ((href "/results"))
-		   (i ((class "fa fa-refresh fa-spin")
-		       (style "font-size:30px"))))
-	       ""))
-      (button ((class "fold_hashtags")) "Show/Hide")
-      (div ((id "hashtags-result"))
-	   ,(if hashtags-result
-		hashtags-result
-		"No results found. If you are waiting on a long-running
+	;; #Hashtags task
+	(h1 "#Hashtags  "
+	    ,(if (and (hashtags-thread) (thread-running? (hashtags-thread)))
+		 `(a ((href "/results"))
+		     (i ((class "fa fa-refresh fa-spin")
+			 (style "font-size:30px"))))
+		 ""))
+	(button ((class "fold_hashtags")) "Show/Hide")
+	(div ((id "hashtags-result"))
+	     ,(if hashtags-result
+		  hashtags-result
+		  "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
-      ;; @user-mentions task
-      (h1 "@User-mentions  "
-	  ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
-	       `(a ((href "/results"))
-		   (i ((class "fa fa-refresh fa-spin")
-		       (style "font-size:30px"))))
-	       ""))
-      (button ((class "fold_user_mentions")) "Show/Hide")
-      (div ((id "user-mentions-result"))
-	   ,(if user-mentions-result
-		user-mentions-result
-		"No results found. If you are waiting on a long-running
+	;; @user-mentions task
+	(h1 "@User-mentions  "
+	    ,(if (and (user-mentions-thread) (thread-running? (user-mentions-thread)))
+		 `(a ((href "/results"))
+		     (i ((class "fa fa-refresh fa-spin")
+			 (style "font-size:30px"))))
+		 ""))
+	(button ((class "fold_user_mentions")) "Show/Hide")
+	(div ((id "user-mentions-result"))
+	     ,(if user-mentions-result
+		  user-mentions-result
+		  "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))))))
+  (define (file-select-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
+  (send/suspend/dispatch response-generator))
 
 ;;; This is our JSON data view URL
 (define (viewer-interface request)
-  (main-template
-   "MassMine: Your Data Analysis"
-   `((h1 "Data Viewer")
-     (p "For optimum browser performance, JSON data beyond 500 entries
+  (define (response-generator embed/url)
+    (main-template
+     "MassMine: Your Data Analysis"
+     `((h1 "Data Viewer")
+       (p "For optimum browser performance, JSON data beyond 500 entries
 is truncated.")
-     ,@(if (and (active-data-file)
-		(not (string=? (active-data-file) "")))
-	  `((pre ((id "json-renderer")))
-	    (script
-	     ([type "text/javascript"])
-	     ,(make-cdata
-	       #f
-	       #f
-	       (string-append
-		"var json = "
-			(with-input-from-file (active-data-file)
-		  (λ () (json-lines->json-array #:head 500)))
-		";\n"
-		"$('#json-renderer').jsonViewer(json, {collapsed: true});"))))
-	  `((p "You must first select a data file"))))))
+       ,@(if (and (active-data-file)
+		  (not (string=? (active-data-file) "")))
+	     `((pre ((id "json-renderer")))
+	       (script
+		([type "text/javascript"])
+		,(make-cdata
+		  #f
+		  #f
+		  (string-append
+		   "var json = "
+		   (with-input-from-file (active-data-file)
+		     (λ () (json-lines->json-array #:head 500)))
+		   ";\n"
+		   "$('#json-renderer').jsonViewer(json, {collapsed: true});"))))
+	     `((p "You must first select a data file"))))))
+  (define (file-select-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
+  (send/suspend/dispatch response-generator))
 
 ;;; Confirm the user's request
 ;; (define (confirm-user-input input-command request)
@@ -487,6 +513,11 @@ is truncated.")
   (define (user-command-handler request)
     (confirm-user-input
      (formlet-process CLI-formlet request)))
+  (define (file-select-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
   (send/suspend/dispatch response-generator))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
