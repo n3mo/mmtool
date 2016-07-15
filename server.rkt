@@ -238,6 +238,47 @@
        `((p "You must select a data file before choosing an analysis task!")))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;        Modals and other x-expression chunks
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Information about the system, and file selector for active file 
+(define (system-info)
+  `(div ((id "system-info"))
+	,(if (massmine?)
+	     `(div ((id "installed"))
+		   ,(string-append "Your MassMine version: " (massmine?)))
+	     `(div ((id "no install"))
+		   "No MassMine installation detected!"))
+	(h3 "Your working directory is: ")
+	(div ,(path->string (current-directory)))
+	(h3 "Your active data file is: ")
+	(div
+	 ,(if (active-data-file)
+	      (active-data-file) "<none selected>"))
+	(br)))
+
+;;; System settings modal
+(define (settings-modal)
+  `(div ((class "modal fade")
+	 (id "settings-modal")
+	 (role "dialog"))
+	(div ((class "modal-dialog"))
+	     (div ((class "modal-content"))
+		  (div ((class "modal-header"))
+		       (button ((type "button")
+				(class "close")
+				(data-dismiss "modal"))
+			       times)
+		       (h4 ((class "modal-title"))
+			   "Settings"))
+		  (div ((class "modal-body"))
+		       ,(system-info))
+		  (div ((class "modal-footer"))
+		       (button ((class "btn btn-default")
+				(data-dismiss "modal"))
+			       "Close"))))))
+
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               HTML Templates
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -281,9 +322,20 @@
 		(div ((class "container-fluid"))
 		     (div ((class "row"))
 			  (div ((class "col-lg-12"))
+			       ;; Sidebar toggle
 			       (a ((href "#menu-toggle")
 				   (class "btn btn-default")
 				   (id "menu-toggle")) "Toggle Menu")
+			       ;; Settings modal toggle
+			       (button ((type "button")
+					(class "btn btn-info btn-md")
+					(data-toggle "modal")
+					(data-target "#settings-modal"))
+				       " "
+				       (span ((class "glyphicon glyphicon-cog")))
+				       " Settings")
+			       ;; And the modal dialog itself
+			       ,(settings-modal)
 			       ;; all main page content goes here
 			       ,@body))))
 	   (script ((src "/js/bootstrap.min.js")))
@@ -301,15 +353,7 @@
   (main-template
    "MassMine: Your Data Analysis"
    `((h1 "Welcome to mmtool: The MassMine data collection and analysis tool")
-     (p "Please choose an option")
-     (div ((id "data-info"))
-	  ,(if (massmine?)
-	       `(div ((id "installed"))
-		     ,(string-append "Your MassMine version: " (massmine?)))
-	       `(div ((id "no install"))
-		     "No MassMine installation detected!"))
-	  (h3 "Your working directory is: ")
-	  (div ((id "path-view")) ,(path->string (current-directory)))))))
+     (p "Please choose an option"))))
 
 ;;; Entry point for data analysis/cleaning/exporting/etc. found at "/analysis"
 (define (analysis-interface request)
@@ -322,13 +366,6 @@
 	     ,@(formlet-display analysis-formlet)
 	     (input ([type "submit"])))
        (div ((id "data-info"))
-	    ,(if (massmine?)
-		 `(div ((id "installed"))
-		       ,(string-append "Your MassMine version: " (massmine?)))
-		 `(div ((id "no install"))
-		       "No MassMine installation detected!"))
-	    (h3 "Your working directory is: ")
-	    (div ((id "path-view")) ,(path->string (current-directory)))
 	    (h3 "Your active data file is: ")
 	    (div ((id "path-view"))
 		 ,(if (active-data-file)
@@ -443,14 +480,6 @@ is truncated.")
     (main-template
      "MassMine: Your Data Analysis"
      `((h1 "MassMine automated command builder")
-       (div ((id "data-info"))
-	    ,(if (massmine?)
-		 `(div ((id "installed"))
-		       ,(string-append "Your MassMine version: " (massmine?)))
-		 `(div ((id "no install"))
-		       "No MassMine installation detected!"))
-	    (h3 "Your working directory is: ")
-	    (div ((id "path-view")) ,(path->string (current-directory))))
        (form ([action
 	       ,(embed/url user-command-handler)])
 	     ,@(formlet-display CLI-formlet)
