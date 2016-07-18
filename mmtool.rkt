@@ -4,7 +4,7 @@
 ;;; This will become a MassMine Analysis and Data Manipulation command
 ;;; line tool 
 
-(require math json)
+(require math json srfi/19)
 
 (include "server.rkt")
 
@@ -72,6 +72,19 @@
             (and head (>= num head)))
 	(jsexpr->string json-array)
 	(loop (add1 num) (cons record json-array)
+	      (read-json (current-input-port))))))
+
+;; This reads json one item at a time, and keeps a record of its
+;; timestamp
+(define (json-timestamps)
+  (let loop ([tstamps '()]
+	     [record (read-json (current-input-port))])
+    (if (eof-object? record)
+	tstamps
+	(loop (cons
+	       (string->date (hash-ref record 'created_at)
+			     "~a ~b ~d ~H:~M:~S ~z ~Y")
+	       tstamps)
 	      (read-json (current-input-port))))))
 
 
