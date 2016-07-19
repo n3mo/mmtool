@@ -91,6 +91,11 @@ input[type=submit]{
     display: none;
 }
 
+#time-series-result {
+    height: 540px;
+    display: none;
+}
+
 pre#json-renderer {
   border: 1px solid #aaa;
   padding: 0.5em 1.5em;

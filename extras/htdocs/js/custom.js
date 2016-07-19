@@ -209,3 +209,7 @@ $('.fold_user_mentions').click(function() {
     $('#user-mentions-result').toggle(500)
 })
 
+$('.fold_time_series').click(function() {
+    $('#time-series-result').toggle(500)
+})
+

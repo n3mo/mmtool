@@ -50,6 +50,7 @@
 (define massmine-result #f)
 (define hashtags-result #f)
 (define user-mentions-result #f)
+(define time-series-result #f)
 
 ;;; Each analysis task runs in its own thread. Because nothing
 ;;; visually happens while an analysis task is running, it would be
@@ -60,7 +61,7 @@
 (define massmine-thread (make-parameter #f))
 (define hashtags-thread (make-parameter #f))
 (define user-mentions-thread (make-parameter #f))
-
+(define time-series-thread (make-parameter #f))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               URL Dispatch
@@ -118,7 +119,7 @@
 
 ;;; Analysis tasks formlet
 (define analysis-tasks-formlet
-  (select-input '("#hashtags" "@user-mentions")))
+  (select-input '("#hashtags" "@user-mentions" "time-series")))
 
 ; File upload formlet
 (define file-upload-formlet
@@ -217,7 +218,11 @@
    [(equal? gui-task "@user-mentions")
     (task 'GUI-user-mentions)
     (user-mentions-thread
-     (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))])
+     (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))]
+   [(equal? gui-task "time-series")
+    (task 'GUI-plot-time-series)
+    (time-series-thread
+     (thread (λ () (set! time-series-result (process-data (active-data-file))))))])
   ;; Analysis task is off and running. Redirect to the results page,
   ;; which may or may not be ready, depending on how long the analysis
   ;; takes. 
@@ -255,7 +260,7 @@
 	(div
 	 ,(if (active-data-file)
 	      (active-data-file) "<none selected>"))
-	;; (br)
+	(br)
 	;; (form ([action
 	;; 	,(embed/url file-select-handler)])
 	;;       ,@(formlet-display file-upload-formlet)
@@ -420,6 +425,24 @@ first run.")
 	(div ((id "massmine-result"))
 	     ,(if massmine-result
 		  `(pre ,massmine-result)
+		  "No results found. If you are waiting on a long-running
+analysis, refresh this page later."))
+	;; Time series task
+	(h1 "Time Series  "
+	    ,(if (and (time-series-thread) (thread-running? (time-series-thread)))
+		 `(a ((href "/results"))
+		     (i ((class "fa fa-refresh fa-spin")
+			 (style "font-size:30px"))))
+		 ""))
+	(button ((class "fold_time_series")) "Show/Hide")
+	(div ((id "time-series-result"))
+	     ,(if time-series-result
+		  `(img ((src ,(string-append "/mm-cache/img/"
+					      (first (reverse
+						      (string-split
+						       time-series-result
+						       "/")))))
+			 (alt "Time Series")))
 		  "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
 	;; #Hashtags task

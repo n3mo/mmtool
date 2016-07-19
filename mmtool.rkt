@@ -300,12 +300,57 @@
 		   #:color "DodgerBlue"
 		   #:width 3)
 		  (tick-grid))
+		 ;; Output file path
+		 outfile
+		 #:x-label "Time"
+		 #:y-label "Frequency"))
+    (printf "Figure saved to file ~a\n" outfile)))
+
+;;; GUI version of plot-time-series
+(define (GUI-plot-time-series #:units [units 'minute])
+  ;; Expensive load time. Only load this when needed
+  (local-require plot)
+  (let ([d (get-time-series #:units units)]
+	[outfile (build-path (cache-img-dir)
+		 	     (string-append (active-data-file)
+		 			    "-time-series.png"))]
+	[time-format
+	 (cond
+	  [(equal? units 'second) "~Y ~m ~d ~H:~M:~S"]
+	  [(equal? units 'minute) "~Y ~m ~d ~H:~M"]
+	  [(equal? units 'hour) "~Y ~m ~d ~H"]
+	  [(equal? units 'day) "~Y ~m ~d"]
+	  [(equal? units 'month) "~Y ~m"]
+	  [(equal? units 'year) "~Y"]
+	  [else "~Y ~m ~d ~H:~M"])]
+	[ticks-format
+	 (cond
+	  [(equal? units 'second) '("~H:~M:~S")]
+	  [(equal? units 'minute) '("~H:~M")]
+	  [(equal? units 'hour) '("~H")]
+	  [(equal? units 'day) '("~d")]
+	  [(equal? units 'month) '("~m")]
+	  [(equal? units 'year) '("~Y")]
+	  [else "~H:~M:~S"])])
+    (parameterize ([plot-x-ticks (date-ticks #:formats ticks-format)]
+		   [plot-width 960]
+		   [plot-height 540])
+      (plot-file (list
+		  (lines
+		   (map vector
+			(map (λ (x) (date->seconds (string->date (first x) time-format))) d)
+			(map second d))
+		   #:color "DodgerBlue"
+		   #:width 3)
+		  (tick-grid))
 		 ;; (build-path (cache-img-dir)
 		 ;; 	     (string-append filename
 		 ;; 			    "-time-series.png"))
 		 outfile
 		 #:x-label "Time"
-		 #:y-label "Frequency"))))
+		 #:y-label "Frequency"))
+    ;; Return outfile path
+    (path->string outfile)))
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
@@ -321,6 +366,7 @@
    [(equal? (task) 'plot-time-series) (plot-time-series)]
    [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
    [(equal? (task) 'GUI-user-mentions) (GUI-user-mentions)]
+   [(equal? (task) 'GUI-plot-time-series) (GUI-plot-time-series)]
    ;; [else (begin (gui? #t) (start-gui))]
    ))
 
