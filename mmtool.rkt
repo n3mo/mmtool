@@ -4,10 +4,11 @@
 ;;; This will become a MassMine Analysis and Data Manipulation command
 ;;; line tool 
 
-(require math json srfi/19 data-science)
+(require math json data-science)
 ;;; I want date->string from srfi/19, not racket/date. But I want the
 ;;; other stuff
 (require (except-in racket/date date->string))
+(require (except-in srfi/19 current-date))
 
 (include "server.rkt")
 
@@ -187,24 +188,39 @@
 				   (td ,(number->string (cdr x)))))
 		       (f (find-usernames-by-record)))))))
 
+;;; Get raw timestamp from JSON
+(define (json-get-raw-timestamps)
+  (let ([tmp (hash-ref (cache) 'timestamps #f)])
+    (if tmp
+	tmp
+	(let loop ([tstamps '()]
+		   [record (read-json (current-input-port))])
+	  (if (eof-object? record)
+	      (begin
+		;; Update the cache?
+		(when (cache-results?)
+		  (hash-set! (cache) 'timestamps tstamps)
+		  (save-cache? #t))
+		;; Return raw timestamps
+		tstamps)
+	      (loop (cons
+		     (hash-ref record 'created_at)
+		     tstamps)
+		    (read-json (current-input-port))))))))
+
 ;; This reads json one item at a time, and keeps a record of its
 ;; timestamp
 (define (json-timestamps)
-  (let loop ([tstamps '()]
-	     [record (read-json (current-input-port))])
-    (if (eof-object? record)
-	tstamps
-	(loop (cons
-	       (string->date (hash-ref record 'created_at)
-			     "~a ~b ~d ~H:~M:~S ~z ~Y")
-	       tstamps)
-	      (read-json (current-input-port))))))
+  (let ([tstamps (json-get-raw-timestamps)])
+    (map (λ (x)
+	   (string->date x
+			 "~a ~b ~d ~H:~M:~S ~z ~Y"))
+	 tstamps)))
 
 ;;; Time series. Simple counts of data records by unit time. Units can
 ;;; be second, minute, hour, day, month, or year as a symbol
 (define (get-time-series #:units [units 'minute])
-  (let ([tmp (hash-ref (cache) 'timestamps #f)]
-	[timestamps (if tmp tmp (json-timestamps))]
+  (let ([timestamps (json-timestamps)]
 	[time-format
 	 (cond
 	  [(equal? units 'second) "~Y ~m ~d ~H:~M:~S"]
@@ -214,10 +230,7 @@
 	  [(equal? units 'month) "~Y ~m"]
 	  [(equal? units 'year) "~Y"]
 	  [else "~Y ~m ~d ~H:~M"])])
-    ;; Update the cache?
-    (when (and (not tmp) (cache-results?))
-      (hash-set! (cache) 'timestamps timestamps)
-      (save-cache? #t))
+    ;; Return
     (sorted-counts
      (map (λ (x) (date->string x time-format)) timestamps))))
 
@@ -236,7 +249,7 @@
    [(equal? (task) 'user-mentions) (display-user-mentions)]
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
-   [(equal? (task) 'time-series (time-series))]
+   [(equal? (task) 'time-series) (time-series)]
    [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
    [(equal? (task) 'GUI-user-mentions) (GUI-user-mentions)]
    ;; [else (begin (gui? #t) (start-gui))]
