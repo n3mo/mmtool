@@ -24,7 +24,7 @@ MassMine provides data in line-oriented JSON format. `mmtool` will work with arb
 mmtool is not yet visually polished. However, the software is currently working, and the following screenshots give a sneak peek:
 
 mmtool provides time series visualization
-![Data Viewer](https://github.com/n3mo/mmtool/raw/master/img/time-series.png)
+![Time Series](https://github.com/n3mo/mmtool/raw/master/img/time-series.png)
 
 mmtool also provides a JSON data viewer to allow the user to visually inspect their "raw" data
 ![Data Viewer](https://github.com/n3mo/mmtool/raw/master/img/data-viewer.png)
