@@ -21,6 +21,8 @@
 ;;; Control parameters --------------------------------------
 ;;; Location of cache files
 (define cache-dir (make-parameter (build-path (current-directory) "mm-cache")))
+;;; Cached images (such as data figures) are saved here
+(define cache-img-dir (make-parameter (build-path (cache-dir) "img")))
 ;;; Active data file (persists across threads and instances of mmtool
 (define active-file-path (make-parameter (build-path (cache-dir) "adf")))
 ;;; Meta cache file. Contains IDs for currently cached objects. 
@@ -255,10 +257,55 @@
     (sorted-counts
      (map (λ (x) (date->string x time-format)) timestamps))))
 
+;;; Pretty printer for command line output. See `get-time-series` for
+;;; retrieving Racket data
 (define (time-series #:units [units 'minute])
   (let ((result (get-time-series #:units units)))
     (for-each (λ (x) (printf "\"~a\": ~a\n" (first x) (second x)))
 	      result)))
+
+(define (plot-time-series #:units [units 'minute])
+  ;; Expensive load time. Only load this when needed
+  (local-require plot)
+  (let ([d (get-time-series #:units units)]
+	[outfile (build-path (current-directory)
+		 	     (string-append filename
+		 			    "-time-series.png"))]
+	[time-format
+	 (cond
+	  [(equal? units 'second) "~Y ~m ~d ~H:~M:~S"]
+	  [(equal? units 'minute) "~Y ~m ~d ~H:~M"]
+	  [(equal? units 'hour) "~Y ~m ~d ~H"]
+	  [(equal? units 'day) "~Y ~m ~d"]
+	  [(equal? units 'month) "~Y ~m"]
+	  [(equal? units 'year) "~Y"]
+	  [else "~Y ~m ~d ~H:~M"])]
+	[ticks-format
+	 (cond
+	  [(equal? units 'second) '("~H:~M:~S")]
+	  [(equal? units 'minute) '("~H:~M")]
+	  [(equal? units 'hour) '("~H")]
+	  [(equal? units 'day) '("~d")]
+	  [(equal? units 'month) '("~m")]
+	  [(equal? units 'year) '("~Y")]
+	  [else "~H:~M:~S"])])
+    (parameterize ([plot-x-ticks (date-ticks #:formats ticks-format)]
+		   [plot-width 960]
+		   [plot-height 540])
+      (plot-file (list
+		  (lines
+		   (map vector
+			(map (λ (x) (date->seconds (string->date (first x) time-format))) d)
+			(map second d))
+		   #:color "DodgerBlue"
+		   #:width 3)
+		  (tick-grid))
+		 ;; (build-path (cache-img-dir)
+		 ;; 	     (string-append filename
+		 ;; 			    "-time-series.png"))
+		 outfile
+		 #:x-label "Time"
+		 #:y-label "Frequency"))))
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
@@ -271,6 +318,7 @@
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
    [(equal? (task) 'time-series) (time-series)]
+   [(equal? (task) 'plot-time-series) (plot-time-series)]
    [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
    [(equal? (task) 'GUI-user-mentions) (GUI-user-mentions)]
    ;; [else (begin (gui? #t) (start-gui))]
@@ -285,6 +333,7 @@
       ;; Cache doesn't exist. Create an empty cache
       (begin
 	(unless (file-exists? (cache-dir)) (make-directory (cache-dir)))
+	(unless (file-exists? (cache-img-dir)) (make-directory (cache-img-dir)))
 	(with-output-to-file (cache-meta-file)
 	  (λ () (write (make-hash))))
 	;; We created a cache file for next time. But we also need a
@@ -365,11 +414,13 @@
    [("--hash-tags") "Display #hashtags" (task 'hash-tags)]
    [("--user-mentions") "Display @usernames" (task 'user-mentions)]
    [("--time-series") "Data frequency across time" (task 'time-series)]
+   [("--plot-time-series") "Plot data frequency across time" (task 'plot-time-series)]
    ;; [("--anonymize") "Anonymize @usernames" (task 'anonymize)]
    [("--purge-cache") "Purge cache (optionally for 1 file)" (task 'purge-cache)]
    [("-v" "--version") "Version info" (task 'version)]
    #:args
-   ([fname null])
+   ([fname null]
+    [options null])
    fname))
 
 (define (process-data data-file)
