@@ -4,7 +4,10 @@
 ;;; This will become a MassMine Analysis and Data Manipulation command
 ;;; line tool 
 
-(require math json data-science)
+(require json)
+(require (only-in math
+		  count-samples
+		  samples->hash))
 ;;; I want date->string from srfi/19, not racket/date. But I want the
 ;;; other stuff
 (require (except-in racket/date date->string))
@@ -61,6 +64,24 @@
 ;;; When running in GUI mode, results (typically X-expressions) are
 ;;; saved into this parameter for passing back to the web server
 (define gui-result (make-parameter #f))
+
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;               Helper Functions
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; taken from data-science
+;;; Generating discrete histograms of (sorted!) binned samples should
+;;; be easier. The following generates sorted bins suitable for
+;;; plotting with `discrete-histogram`. This function is similar to
+;;; `samples->hash` but does not return a hash or dotted pairs. The
+;;; return value is a list of (key value) pairs sorted by keys.
+;;; Example: '(3 3 2 1 4 4 4) => '((1 1) (2 1) (3 2) (4 3))
+(define (sorted-counts lst)
+  (let-values ([(keys values) (count-samples lst)])
+    (sort (map list keys values)
+	  (λ (x y) (if (number? (car x))
+		       (< (car x) (car y))
+		       (string<? (car x) (car y)))))))
 
 ;;; This function reads line-oriented JSON (as output by massmine),
 ;;; and packages it into an array. This isn't how we want to do
