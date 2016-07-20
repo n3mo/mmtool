@@ -76,6 +76,7 @@
      [("analysis") analysis-interface]
      [("results") results-interface]
      [("viewer") viewer-interface]
+     [("settings") settings-interface]
      ;;[else main-interface]
      ))
 
@@ -289,10 +290,10 @@
 	;;       (input ([type "submit"])))
 	))
 
-;;; System settings modal
-(define (settings-modal)
+;;; System info modal
+(define (info-modal)
   `(div ((class "modal fade")
-	 (id "settings-modal")
+	 (id "info-modal")
 	 (role "dialog"))
 	(div ((class "modal-dialog"))
 	     (div ((class "modal-content"))
@@ -302,7 +303,7 @@
 				(data-dismiss "modal"))
 			       times)
 		       (h4 ((class "modal-title"))
-			   "Settings"))
+			   "System Info"))
 		  (div ((class "modal-body"))
 		       ,(system-info))
 		  (div ((class "modal-footer"))
@@ -358,16 +359,21 @@
 			       (a ((href "#menu-toggle")
 				   (class "btn btn-default")
 				   (id "menu-toggle")) "Toggle Menu")
-			       ;; Settings modal toggle
+			       ;; Settings button
+			       (a ((class "btn btn-default")
+				   (href "/settings"))
+				  (span ((class "glyphicon glyphicon-cog")))
+				  " Settings")
+			       ;; System info modal toggle
 			       (button ((type "button")
 					(class "btn btn-info btn-md")
 					(data-toggle "modal")
-					(data-target "#settings-modal"))
+					(data-target "#info-modal"))
 				       " "
-				       (span ((class "glyphicon glyphicon-cog")))
-				       " Settings")
+				       (span ((class "glyphicon glyphicon-info-sign")))
+				       " Info")
 			       ;; And the modal dialog itself
-			       ,(settings-modal)
+			       ,(info-modal)
 			       ;; all main page content goes here
 			       ,@body))))
 	   (script ((src "/js/bootstrap.min.js")))
@@ -563,6 +569,29 @@ is truncated.")
   (define (user-command-handler request)
     (confirm-user-input
      (formlet-process CLI-formlet request)))
+  (define (file-select-handler request)
+    (active-data-file
+     (bytes->string/utf-8
+      (formlet-process file-upload-formlet request)))
+    (analysis-interface (redirect/get)))
+  (send/suspend/dispatch response-generator))
+
+;;; System settings interface
+(define (settings-interface request)
+  (define (response-generator embed/url)
+    (main-template
+     "MassMine: Your Data Analysis"
+     `((h1 "System Settings")
+       (div ((id "data-info"))
+	    (h3 "Your active data file is: ")
+	    (div ((id "path-view"))
+		 ,(if (active-data-file)
+		      (active-data-file) "<none selected>"))
+	    (br)
+	    (form ([action
+		    ,(embed/url file-select-handler)])
+		  ,@(formlet-display file-upload-formlet)
+		  (input ([type "submit"])))))))
   (define (file-select-handler request)
     (active-data-file
      (bytes->string/utf-8
