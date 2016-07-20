@@ -284,9 +284,10 @@
 	(h3 "Your working directory is: ")
 	(div ,(path->string (current-directory)))
 	(h3 "Your active data file is: ")
-	(div
+	(div ((id "path-view"))
 	 ,(if (active-data-file)
-	      (active-data-file) "<none selected>"))
+	      (data-file-info)
+	      "<none selected>"))
 	(br)
 	;; (form ([action
 	;; 	,(embed/url file-select-handler)])
@@ -314,6 +315,15 @@
 		       (button ((class "btn btn-default")
 				(data-dismiss "modal"))
 			       "Close"))))))
+
+;;; Use this x-expression anywhere you want to display the current
+;;; active data file's information
+(define (data-file-info)
+  `(table ((class "table"))
+	  (tr (th "Filename")
+	      (th "Data File Type"))
+	  (tr (th ,(active-data-file))
+	      (th "Twitter Stream Data"))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               HTML Templates
@@ -580,7 +590,8 @@ is truncated.")
 	(h3 "Your active data file is: ")
 	(div ((id "path-view"))
 	     ,(if (active-data-file)
-		  (active-data-file) "<none selected>"))
+		  (data-file-info)
+		  "<none selected>"))
 	(br)
 	(form ([action
 		,(embed/url file-select-handler)])
