@@ -246,7 +246,9 @@
       (process-data-dispatch (hash-ref hsh 'task))
       (main-template
        "MassMine: Your Data Analysis"
-       `((p "You must select a data file before choosing an analysis task!")))))
+       `((p "You must "
+	    (a ((href "/settings")) "select a data file")
+	    " before choosing an analysis task!")))))
 
 ;;; Time series analysis. This handles the user's request for units of
 ;;; time
@@ -263,7 +265,9 @@
 	 (results-interface (redirect/get))))
       (main-template
        "MassMine: Your Data Analysis"
-       `((p "You must select a data file before choosing an analysis task!")))))
+       `((p "You must "
+	    (a ((href "/settings")) "select a data file")
+	    " before choosing an analysis task!")))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;        Modals and other x-expression chunks
@@ -425,22 +429,7 @@
 	(form ([action
 		,(embed/url time-series-handler)])
 	      ,@(formlet-display time-series-formlet)
-	      (input ([type "submit"]))))
-       (div ((id "data-info"))
-	    (h3 "Your active data file is: ")
-	    (div ((id "path-view"))
-		 ,(if (active-data-file)
-		      (active-data-file) "<none selected>"))
-	    (br)
-	    (form ([action
-		    ,(embed/url file-select-handler)])
-		  ,@(formlet-display file-upload-formlet)
-		  (input ([type "submit"])))))))
-  (define (file-select-handler request)
-    (active-data-file
-     (bytes->string/utf-8
-      (formlet-process file-upload-formlet request)))
-    (analysis-interface (redirect/get)))
+	      (input ([type "submit"])))))))
   (define (analysis-handler request)
     (analysis-dispatch (formlet-process analysis-formlet request)))
   (define (time-series-handler request)
@@ -541,7 +530,9 @@ is truncated.")
 		     (λ () (json-lines->json-array #:head 500)))
 		   ";\n"
 		   "$('#json-renderer').jsonViewer(json, {collapsed: true});"))))
-	     `((p "You must first select a data file"))))))
+	     `((p "You must "
+	    (a ((href "/settings")) "select a data file")
+	    " before using the Data Viewer"))))))
   (define (file-select-handler request)
     (active-data-file
      (bytes->string/utf-8
@@ -582,21 +573,24 @@ is truncated.")
     (main-template
      "MassMine: Your Data Analysis"
      `((h1 "System Settings")
-       (div ((id "data-info"))
-	    (h3 "Your active data file is: ")
-	    (div ((id "path-view"))
-		 ,(if (active-data-file)
-		      (active-data-file) "<none selected>"))
-	    (br)
-	    (form ([action
-		    ,(embed/url file-select-handler)])
-		  ,@(formlet-display file-upload-formlet)
-		  (input ([type "submit"])))))))
+       (div
+	(p "To perform data analysis or to use the "
+	   (a ((href "/viewer")) "Data Viewer")
+	   " , you must first select a data file to set as \"active\"")
+	(h3 "Your active data file is: ")
+	(div ((id "path-view"))
+	     ,(if (active-data-file)
+		  (active-data-file) "<none selected>"))
+	(br)
+	(form ([action
+		,(embed/url file-select-handler)])
+	      ,@(formlet-display file-upload-formlet)
+	      (input ([type "submit"])))))))
   (define (file-select-handler request)
     (active-data-file
      (bytes->string/utf-8
       (formlet-process file-upload-formlet request)))
-    (analysis-interface (redirect/get)))
+    (settings-interface (redirect/get)))
   (send/suspend/dispatch response-generator))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
