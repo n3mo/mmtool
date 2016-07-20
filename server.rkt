@@ -437,12 +437,7 @@ analysis, refresh this page later."))
 	(button ((class "fold_time_series")) "Show/Hide")
 	(div ((id "time-series-result"))
 	     ,(if time-series-result
-		  `(img ((src ,(string-append "/mm-cache/img/"
-					      (first (reverse
-						      (string-split
-						       time-series-result
-						       "/")))))
-			 (alt "Time Series")))
+		  time-series-result
 		  "No results found. If you are waiting on a long-running
 analysis, refresh this page later."))
 	;; #Hashtags task

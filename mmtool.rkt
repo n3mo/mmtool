@@ -349,8 +349,14 @@
 		 outfile
 		 #:x-label "Time"
 		 #:y-label "Frequency"))
-    ;; Return outfile path
-    (path->string outfile)))
+    ;; Return x-expression
+    `(img ((src ,(string-append
+		  "/mm-cache/img/"
+		  (first (reverse
+			  (string-split
+			   (path->string outfile)
+			   "/")))))
+	   (alt "Time Series")))))
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
