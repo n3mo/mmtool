@@ -119,7 +119,11 @@
 
 ;;; Analysis tasks formlet
 (define analysis-tasks-formlet
-  (select-input '("#hashtags" "@user-mentions" "time-series")))
+  (select-input '("#hashtags" "@user-mentions")))
+
+;;; Time series analysis formlet
+(define time-series-options-formlet
+  (select-input '("second" "minute" "hour" "day" "month" "year")))
 
 ; File upload formlet
 (define file-upload-formlet
@@ -159,6 +163,15 @@
     (div ((id "task"))
 	 "Choose a task:" ,{analysis-tasks-formlet . => . task}))
    (hash 'task task)))
+
+;;; Time series formlet
+(define time-series-formlet
+  (formlet
+   (div
+    (div ((id "time-series"))
+	 "Select your unit of time:"
+	 ,{time-series-options-formlet . => . units}))
+   (hash 'units units)))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;           MassMine Command Builder
@@ -218,26 +231,35 @@
    [(equal? gui-task "@user-mentions")
     (task 'GUI-user-mentions)
     (user-mentions-thread
-     (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))]
-   [(equal? gui-task "time-series")
-    (task 'GUI-plot-time-series)
-    (time-series-thread
-     (thread (λ () (set! time-series-result (process-data (active-data-file))))))])
+     (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))])
   ;; Analysis task is off and running. Redirect to the results page,
   ;; which may or may not be ready, depending on how long the analysis
   ;; takes. 
   (results-interface (redirect/get)))
 
 ;;; Analysis dispatch. When the user selects an analysis/processing
-;;; task, this function determines who to call
-;; (define (analysis-dispatch hsh)
-;;   (main-template
-;;    "MassMine: Your Data Analysis"
-;;    `((p ,(string-append "Executed task: " (hash-ref hsh 'task)))
-;;      ,(process-data-dispatch (hash-ref hsh 'task)))))
+;;; task, this function determines who to call. This is used for
+;;; simple analysis tasks that have fixed options
 (define (analysis-dispatch hsh)
   (if (active-data-file)
       (process-data-dispatch (hash-ref hsh 'task))
+      (main-template
+       "MassMine: Your Data Analysis"
+       `((p "You must select a data file before choosing an analysis task!")))))
+
+;;; Time series analysis. This handles the user's request for units of
+;;; time
+(define (time-series-dispatch hsh)
+  (if (active-data-file)
+      (begin
+	(time-units (string->symbol (hash-ref hsh 'units)))
+	(task 'GUI-plot-time-series)
+	(time-series-thread
+	 (thread (λ () (set! time-series-result (process-data (active-data-file)))))
+	 ;; Analysis task is off and running. Redirect to the results page,
+	 ;; which may or may not be ready, depending on how long the analysis
+	 ;; takes. 
+	 (results-interface (redirect/get))))
       (main-template
        "MassMine: Your Data Analysis"
        `((p "You must select a data file before choosing an analysis task!")))))
@@ -378,10 +400,26 @@
     (main-template
      "MassMine: Your Data Analysis"
      `((h1 "Data Processing and Analysis")
-       (form ([action
-	       ,(embed/url analysis-handler)])
-	     ,@(formlet-display analysis-formlet)
-	     (input ([type "submit"])))
+       (div
+	(h2 "Text Processing")
+	(dl
+	 (dt "#hashtags")
+	 (dd "Creates a table of #hashtags and their corresponding frequencies")
+	 (dt "@user-mentions")
+	 (dd "Creates a table of #usernames and their corresponding frequencies"))
+	(form ([action
+		,(embed/url analysis-handler)])
+	      ,@(formlet-display analysis-formlet)
+	      (input ([type "submit"]))))
+       ;; Time series formlet
+       (div
+	(h2 "Time Series")
+	"Create a line chart displaying the frequency of data records across time. "
+	"Data frequencies are counted according to the unit of time chosen below"
+	(form ([action
+		,(embed/url time-series-handler)])
+	      ,@(formlet-display time-series-formlet)
+	      (input ([type "submit"]))))
        (div ((id "data-info"))
 	    (h3 "Your active data file is: ")
 	    (div ((id "path-view"))
@@ -399,6 +437,8 @@
     (analysis-interface (redirect/get)))
   (define (analysis-handler request)
     (analysis-dispatch (formlet-process analysis-formlet request)))
+  (define (time-series-handler request)
+    (time-series-dispatch (formlet-process time-series-formlet request)))
   (send/suspend/dispatch response-generator))
 
 ;;; Results page. If the user has run an analysis, the result(s)
@@ -504,14 +544,6 @@ is truncated.")
   (send/suspend/dispatch response-generator))
 
 ;;; Confirm the user's request
-;; (define (confirm-user-input input-command request)
-;;   (let* ((cmd (build-mm-command input-command)))
-;;     (main-template
-;;      "MassMine: Your Data Analysis"
-;;      `((p ,(string-append "Command received: " cmd))
-;;        (p "Results of command execution")
-;;        (div ((id "results"))
-;; 	    (pre ,(run-user-command cmd)))))))
 (define (confirm-user-input input-command)
   (let ((cmd (build-mm-command input-command)))
     (massmine-thread

@@ -66,6 +66,9 @@
 ;;; When running in GUI mode, results (typically X-expressions) are
 ;;; saved into this parameter for passing back to the web server
 (define gui-result (make-parameter #f))
+;;; Unit of time for binning in time series analyses. Default is
+;;; "minute" 
+(define time-units (make-parameter 'minute))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               Helper Functions
@@ -356,7 +359,8 @@
 			  (string-split
 			   (path->string outfile)
 			   "/")))))
-	   (alt "Time Series")))))
+	   (alt "Time Series")
+	   (class "img-responsive")))))
 
 ;;; This gets things done. Primarily, this reads an input (from stdin
 ;;; or file) line by line and/or calls a corresponding task dependent
@@ -368,11 +372,11 @@
    [(equal? (task) 'user-mentions) (display-user-mentions)]
    [(equal? (task) 'purge-cache) (purge-cache)]
    [(equal? (task) 'version) (print-version)]
-   [(equal? (task) 'time-series) (time-series)]
-   [(equal? (task) 'plot-time-series) (plot-time-series)]
+   [(equal? (task) 'time-series) (time-series #:units (time-units))]
+   [(equal? (task) 'plot-time-series) (plot-time-series #:units (time-units))]
    [(equal? (task) 'GUI-hashtags) (GUI-hashtags)]
    [(equal? (task) 'GUI-user-mentions) (GUI-user-mentions)]
-   [(equal? (task) 'GUI-plot-time-series) (GUI-plot-time-series)]
+   [(equal? (task) 'GUI-plot-time-series) (GUI-plot-time-series #:units (time-units))]
    ;; [else (begin (gui? #t) (start-gui))]
    ))
 
