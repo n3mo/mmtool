@@ -32,6 +32,10 @@ mmtool also provides a JSON data viewer to allow the user to visually inspect th
 Analysis routines are individually threaded, and status information and results are available asynchronously at all times:
 ![Analysis Results](https://github.com/n3mo/mmtool/raw/master/img/results.png)
 
+# Contributors
+
+- [Aaron Beveridge](https://github.com/aabeveridge/)
+
 # License
 
 Copyright (C) 2016 Nicholas M. Van Horn
