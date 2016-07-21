@@ -74,6 +74,54 @@
 ;;;               Helper Functions
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Data type heuristic. This function reads a sample from a data file
+;;; (from current-input port), and uses heuristics to attempt to
+;;; identify what kind of MassMine data it contains. For instance, if
+;;; a user collected data with MassMine using the "twitter-stream"
+;;; task, this function should identify the resulting data file as
+;;; "Twitter Stream Data" (or similar)
+(define (data-type? #:attempts [attempts 5])
+  (let ([record (read-json (current-input-port))])
+    (if (list? record)
+	;; JSON data was in an array. Work with what is now a list
+	(let loop ([num-attempts 1]
+		   [d record])
+	  (when (null? d) "Unknown Data Source")
+	  (let ([result (data-type-heuristic (car d))])
+	    (if result
+		result
+		(loop (add1 num-attempts) (cdr d)))))
+	;; JSON data is line-oriented. Work by reading the file
+	(let loop ([num-attempts 1]
+		   [d record])
+	  (when (or (eof-object? d) (>= num-attempts attempts))
+	    "Unknown Data Source")
+	  (let ([result (data-type-heuristic d)])
+	    (if result
+		result
+		(loop (add1 num-attempts) (read-json (current-input-port)))))))))
+
+(define (data-type-heuristic record)
+  (cond
+   [(and (hash-ref record 'id #f)
+	 (hash-ref record 'created_at #f)
+	 (hash-ref record 'text #f))
+    "Twitter Tweets"]
+   [(and (hash-ref record 'woeid #f)
+	 (hash-ref record 'tweet_volume #f))
+    "Twitter Trends"]
+   [(and (hash-ref record 'description #f)
+	 (hash-ref record 'screen_name #f)
+	 (hash-ref record 'followers_count #f))
+    "Twitter Friends/Followers"]
+   [(and (hash-ref record 'placeType #f)
+	 (hash-ref record 'countryCode #f))
+    "Twitter Locations"]
+   ;; We've run out of options at this point and still can't
+   ;; identify the data source. Return #f and let the calling function
+   ;; decide what to do
+   [else #f]))
+
 ;; taken from data-science
 ;;; Generating discrete histograms of (sorted!) binned samples should
 ;;; be easier. The following generates sorted bins suitable for

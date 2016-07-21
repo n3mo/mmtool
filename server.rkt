@@ -16,11 +16,11 @@
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The current file selected by the user for data
-;;; analysis/processing. This acts as a parameter with make-parameter,
-;;; but using the local disk (in the user's cache) for managing the
-;;; information across threads (and instances). 
-
+;;; analysis/processing. 
 (define active-data-file (make-parameter #f))
+;;; The current active data file's data type (i.e., is the data from
+;;; twitter-stream, wikipedia-text, etc.)
+(define active-data-type (make-parameter #f))
 
 ;; (define (active-data-file [file-name #f])
 ;;   (if file-name
@@ -287,13 +287,7 @@
 	(div ((id "path-view"))
 	 ,(if (active-data-file)
 	      (data-file-info)
-	      "<none selected>"))
-	(br)
-	;; (form ([action
-	;; 	,(embed/url file-select-handler)])
-	;;       ,@(formlet-display file-upload-formlet)
-	;;       (input ([type "submit"])))
-	))
+	      "<none selected>"))))
 
 ;;; System info modal
 (define (info-modal)
@@ -321,9 +315,9 @@
 (define (data-file-info)
   `(table ((class "table"))
 	  (tr (th "Filename")
-	      (th "Data File Type"))
+	      (th "Data Type"))
 	  (tr (th ,(active-data-file))
-	      (th "Twitter Stream Data"))))
+	      (th ,(active-data-type)))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               HTML Templates
@@ -601,6 +595,9 @@ is truncated.")
     (active-data-file
      (bytes->string/utf-8
       (formlet-process file-upload-formlet request)))
+    (active-data-type
+     (with-input-from-file (active-data-file)
+       (λ () (data-type?))))
     (settings-interface (redirect/get)))
   (send/suspend/dispatch response-generator))
 
