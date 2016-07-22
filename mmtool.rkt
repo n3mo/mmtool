@@ -82,14 +82,14 @@
 ;;; "Twitter Stream Data" (or similar)
 (define (data-type? #:attempts [attempts 5])
   (let ([record (read-json (current-input-port))])
-    (when (eof-object? record) "Unknown Data Source")
+    (when (eof-object? record) "<Unknown Data Source>")
     (if (list? record)
 	;; JSON data was in an array. Work with what is now a list
 	(let loop ([num-attempts 1]
 		   [d record])
 	  (when (or (> num-attempts attempts)
 		    (null? d))
-	    "Unknown Data Source")
+	    "<Unknown Data Source>")
 	  (let ([result (data-type-heuristic (car d))])
 	    (if result
 		result
@@ -99,7 +99,7 @@
 		   [d record])
 	  (if (or (> num-attempts attempts)
 		    (eof-object? d))
-	      "Unknown Data Source"
+	      "<Unknown Data Source>"
 	      (let ([result (data-type-heuristic d)])
 		(if result
 		    result
