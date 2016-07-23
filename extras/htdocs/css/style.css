@@ -23,6 +23,17 @@ h1 {
     margin-bottom: 20px;
 }
 
+.navbar-nav > li > a, .navbar-brand {
+    padding-top:8px !important;
+    padding-bottom:0 !important;
+    height: 30px;
+}
+.navbar {min-height:30px !important;}
+
+.navbar-default {
+  background-color: #303030;
+}
+
 #data-info {
     background-color: #333366;
     color: #FFFFFF;

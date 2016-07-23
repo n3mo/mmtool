@@ -16,7 +16,7 @@
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; The current file selected by the user for data
-;;; analysis/processing. 
+;;; analysis/processing.
 (define active-data-file (make-parameter #f))
 ;;; The current active data file's data type (i.e., is the data from
 ;;; twitter-stream, wikipedia-text, etc.)
@@ -235,7 +235,7 @@
      (thread (λ () (set! user-mentions-result (process-data (active-data-file))))))])
   ;; Analysis task is off and running. Redirect to the results page,
   ;; which may or may not be ready, depending on how long the analysis
-  ;; takes. 
+  ;; takes.
   (results-interface (redirect/get)))
 
 ;;; Analysis dispatch. When the user selects an analysis/processing
@@ -261,7 +261,7 @@
 	 (thread (λ () (set! time-series-result (process-data (active-data-file)))))
 	 ;; Analysis task is off and running. Redirect to the results page,
 	 ;; which may or may not be ready, depending on how long the analysis
-	 ;; takes. 
+	 ;; takes.
 	 (results-interface (redirect/get))))
       (main-template
        "MassMine: Your Data Analysis"
@@ -273,7 +273,7 @@
 ;;;        Modals and other x-expression chunks
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Information about the system, and file selector for active file 
+;;; Information about the system, and file selector for active file
 (define (system-info)
   `(div ((id "system-info"))
 	,(if (massmine?)
@@ -339,12 +339,21 @@
       (link ((href "/css/style.css") (rel "stylesheet")))
       (link ((href "/css/jquery.json-viewer.css") (rel "stylesheet")))
       (script ((src "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")))
-      (script ((src "/js/jquery.js")))      
+      (script ((src "/js/jquery.js")))
       (script ((src "/js/jquery.json-viewer.js"))))
      (body
       ;; full page wrapper--allows side bar menu to shift all content
       ;; move the closing parenthasis for it to above id=page-content-wrapper
       ;; to cover page content instead of shifting it right
+
+			;;Top menu bar
+			;(div ((id "app-menu") (class "navbar navbar-default navbar-fixed-top"))
+			;	(div ((class "container"))
+			;		(div ((class "navbar-header pull-left"))
+			;			(a ((class "navbar-brand"))
+			;				(span ((id "titlea"))"Mass")
+			;				(span ((id "titleb"))"Analytics")))))
+
       (div ((id "wrapper"))
 	   ;; sidebar
 	   (div ((id "sidebar-wrapper"))
@@ -361,12 +370,17 @@
 		;; (a ((href "#menu-toggle") (id "menu-toggle"))
 		;; (i ((class "fa fa-bars") (style "font-size:x-large;"))))
 		(div ((class "container-fluid"))
-		     (div ((class "row"))
-			  (div ((class "col-lg-12"))
+			;;fullscreen button--will collapse both sidebar and top menu
+			(div ((class "row"))
+				(div ((class "col-lg-12"))
+				 (button ((id "menu-toggle") (type "button") (class "btn btn-default btn-sm pull-right"))
+					(span ((class "glyphicon glyphicon-fullscreen"))))))
+			(div ((class "row"))
+		  	(div ((class "col-lg-12"))
 			       ;; Sidebar toggle
-			       (a ((href "#menu-toggle")
-				   (class "btn btn-default")
-				   (id "menu-toggle")) "Toggle Menu")
+			    ;   (a ((href "#menu-toggle")
+				  ; (class "btn btn-default")
+				  ; (id "menu-toggle")) "Toggle Menu")
 			       ;; Settings button
 			       (a ((class "btn btn-default")
 				   (href "/settings"))
@@ -452,7 +466,7 @@
        (p "The results of any analyses can be found below. For large
 data sets, it may take time for your results to appear here on the
 first run.")
-       (div 
+       (div
 	;; Data collection task
 	(h1 "Data Collection  "
 	    ,(if (and (massmine-thread) (thread-running? (massmine-thread)))
