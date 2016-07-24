@@ -347,19 +347,19 @@
       ;; to cover page content instead of shifting it right
 
 			;;Top menu bar
-			;(div ((id "app-menu") (class "navbar navbar-default navbar-fixed-top"))
-			;	(div ((class "container"))
-			;		(div ((class "navbar-header pull-left"))
-			;			(a ((class "navbar-brand"))
-			;				(span ((id "titlea"))"Mass")
-			;				(span ((id "titleb"))"Analytics")))))
+			(div ((id "app-menu") (class "navbar navbar-default navbar-fixed-top"))
+				(div ((class "container"))
+					(div ((id "app-title") (class "navbar-header pull-left"))
+						(a ((class "navbar-brand pull-left"))
+							(span ((id "titlea"))"Mass")
+							(span ((id "titleb"))"Analytics")))))
 
       (div ((id "wrapper"))
 	   ;; sidebar
 	   (div ((id "sidebar-wrapper"))
 		(ul ((class "sidebar-nav"))
 		    (li ((class "side-top"))
-			(h1 "mmtool")
+			;(h1 "mmtool")
 			(a ((href "/")) "Main"))
 		    (li (a ((href "/collect")) "Collection"))
 		    (li (a ((href "/viewer")) "Data Viewer"))

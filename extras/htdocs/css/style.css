@@ -28,10 +28,43 @@ h1 {
     padding-bottom:0 !important;
     height: 30px;
 }
-.navbar {min-height:30px !important;}
+.navbar {
+  min-height:30px !important;
+}
 
 .navbar-default {
-  background-color: #303030;
+  background-color: black;
+  color:#ffffff;
+  border-color: black;
+  border-radius: 0;
+}
+
+#menu-toggle {
+  margin-right: -18px;
+}
+
+#app-title {
+  margin-left: -100px;
+  padding-left: 0;
+  margin-top: -3px;
+}
+
+#titlea {
+    color:#989898;
+    font-size:20px;
+    font-family: proxima-nova, sans-serif;
+    font-weight: 900;
+}
+
+#titleb {
+    color:#FFFFFF;
+    font-size:20px;
+    font-family: proxima-nova, sans-serif;
+    font-weight: 900;
+}
+
+#wrapper {
+  margin-top: 30px;
 }
 
 #data-info {

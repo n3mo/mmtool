@@ -4,6 +4,13 @@ $("#menu-toggle").click(function(e) {
 });
 
 ////////////////////////////////////////
+// Full screen toggle
+////////////////////////////////////////
+$('#menu-toggle').click(function(){
+      $('#app-menu').toggle();
+});
+
+////////////////////////////////////////
 // removes select choice on reload
 ////////////////////////////////////////
 $(window).unload(function() {
@@ -212,4 +219,3 @@ $('.fold_user_mentions').click(function() {
 $('.fold_time_series').click(function() {
     $('#time-series-result').toggle(500)
 })
-
