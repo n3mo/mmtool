@@ -108,6 +108,7 @@
 
 (define (data-type-heuristic record)
   (cond
+   ;; Twitter data sources
    [(and (hash-ref record 'id #f)
 	 (hash-ref record 'created_at #f)
 	 (hash-ref record 'text #f))
@@ -122,6 +123,38 @@
    [(and (hash-ref record 'placeType #f)
 	 (hash-ref record 'countryCode #f))
     "Twitter Locations"]
+   ;; Google data sources
+   [(and (hash-ref record 'location #f)
+	 (hash-ref record 'query #f))
+    "Google Country Trends"]
+   [(hash-ref record 'formattedTraffic #f)
+    "Google Trends"]
+   ;; Tumblr data sources
+   [(hash-ref record 'total_posts #f)
+    "Tumblr Info"]
+   [(hash-ref record 'featured_in_tag #f)
+    "Tumblr Tag Search"]
+   [(hash-ref record 'blog_name #f)
+    "Tumblr Posts"]
+   ;; Web URL data sources
+   [(and (hash-ref record 'text #f)
+	 (hash-ref record 'url #f)
+	 (hash-ref record 'timestamp #f))
+    "Web Pages"]
+   ;; Wikipedia data sources
+   [(and (hash-ref record 'ns #f)
+	 (hash-ref record 'title #f)
+	 (hash-ref record 'source #f))
+    "Wikipedia Links"]
+   [(and (hash-ref record 'size #f)
+	 (hash-ref record 'wordcount #f))
+    "Wikipedia Search"]
+   [(and (hash-ref record 'ns #f)
+	 (hash-ref record 'pageid #f))
+    "Wikipedia Text"]
+   [(and (hash-ref record 'date #f)
+	 (hash-ref record 'views #f))
+    "Wikipedia Page Views"]
    ;; We've run out of options at this point and still can't
    ;; identify the data source. Return #f and let the calling function
    ;; decide what to do
