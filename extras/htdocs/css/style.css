@@ -44,23 +44,75 @@ h1 {
 }
 
 #app-title {
-  margin-left: -100px;
+  margin-left: -108px;
   padding-left: 0;
   margin-top: -3px;
 }
 
-#titlea {
+#mass {
     color:#989898;
-    font-size:20px;
+    font-size:14px;
     font-family: proxima-nova, sans-serif;
     font-weight: 900;
 }
 
-#titleb {
+#mine {
     color:#FFFFFF;
-    font-size:20px;
+    font-size:14px;
     font-family: proxima-nova, sans-serif;
     font-weight: 900;
+}
+
+#toolset {
+  color: white;
+  font-size:22px;
+  font-family: proxima-nova, sans-serif;
+  font-weight: bold;
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.dropdown-toggle:active, .open .dropdown-toggle {
+  background:black !important;
+  color:#D8D8D8 !important;
+}
+
+.dropdown-toggle {
+  color:white !important;
+}
+
+#settings {
+  font-size: 25px;
+  margin-top: -6px;
+  padding-bottom: 6px;
+  color: white;
+  margin-right: -55px;
+}
+
+#sidebar-wrapper i {
+    margin-left: -12px;
+    margin-right: 12px;
+    color: #282828;
+    font-size: 20px;
+    margin-bottom: -6px;
+}
+
+#sidebar-wrapper {
+  background-color: #989898;
+}
+
+#sidebar-wrapper a {
+  color: black;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+#sidebar-wrapper li {
+  margin-top: 10px;
+}
+
+#sidebar-wrapper a:hover {
+  color: white;
 }
 
 #wrapper {
