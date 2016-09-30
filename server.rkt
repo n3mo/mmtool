@@ -360,7 +360,7 @@
 			(span ((id "toolset"))"Toolset")))
 		(div ((id "navbar")
 		      (class "navbar-collapse collapse"))
-		     (ul ((class "nav nav-pills"))
+		     (ul ((class "nav navbar-nav"))
 			 ;; (li ((class "dropdown"))
 			 ;;     (a ((href "#")
 			 ;; 	 (class "dropdown-toggle")

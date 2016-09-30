@@ -27,10 +27,11 @@ h1 {
 .navbar-nav > li > a, .navbar-brand {
     padding-top:8px !important;
     padding-bottom:0 !important;
-    height: 30px;
+    height: 30px;    
 }
+
 .navbar {
-  min-height:30px !important;
+    min-height:30px !important;
 }
 
 .navbar-default {
@@ -52,21 +53,21 @@ h1 {
 
 #mass {
     color:#989898;
-    font-size:14px;
+    font-size:20px;
     font-family: proxima-nova, sans-serif;
     font-weight: 900;
 }
 
 #mine {
     color:#FFFFFF;
-    font-size:14px;
+    font-size:20px;
     font-family: proxima-nova, sans-serif;
     font-weight: 900;
 }
 
 #toolset {
   color: white;
-  font-size:22px;
+  font-size:28px;
   font-family: proxima-nova, sans-serif;
   font-weight: bold;
   margin-left: 4px;
