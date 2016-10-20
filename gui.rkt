@@ -23,6 +23,10 @@
       (plot? #f)
       (plot? #t)))
 
+;;; Overall window sizing
+(define gui-width (make-parameter 800))
+(define gui-height (make-parameter 600))
+
 ;;; Example data for debugging -----------------------------------------
 
 (define hashtag-data '(("#love" "#hate" "#war") ("15" "10" "8")))
@@ -38,8 +42,8 @@
 ;;; Everything that the user is seeing goes here
 (define main-frame (new frame%
 			[label "MassMine Analytics"]
-			[width 800]
-			[height 600]))
+			[width (gui-width)]
+			[height (gui-height)]))
 
 ;;; Hidden panel for putting things away. Most results windows will
 ;;; start their lives here
@@ -47,60 +51,116 @@
   (new frame%
        [label "Hidden Frame"]))
 
+;;; Main panel that holds everything. This controls the overall
+;;; layout, such that the controls are on the left, for example, and
+;;; the visualizations are on the right.
+(define main-panel
+  (new horizontal-panel% [parent main-frame]
+       [alignment '(center top)]))
 
-;;; Main control parameter for analysis options
-(define control-panel (new horizontal-panel% [parent main-frame]
-			   [alignment '(center top)]))
+;;; Main control parameter for button interface
+(define control-panel (new vertical-panel% [parent main-panel]
+			   [alignment '(center top)]
+			   [min-width (round (/ (gui-width) 2))]))
+
+;;; Things that dynamically change with user interaction appear over
+;;; here
+(define visuals-panel
+  (new panel%
+       [parent main-panel]
+       [style (list 'auto-vscroll 'auto-hscroll)]
+       [alignment '(center top)]
+       [min-width (round (/ (gui-width) 2))]))
 
 ;;; Panel buttons
 (new button% [parent control-panel]
-     [label "#Hash Tags"]
+     [label "Collection"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
-		 (show-hashtags))])
+		 (send results-panel reparent hidden-frame)
+		 (send settings-panel reparent hidden-frame)
+		 (send collection-panel reparent visuals-panel))])
 (new button% [parent control-panel]
-     [label "@User Mentions"]
+     [label "Analysis"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
-		 (println "@user mentions done!"))])
+		 (send collection-panel reparent hidden-frame)
+		 (send settings-panel reparent hidden-frame)
+		 (send results-panel reparent visuals-panel))])
 (new button% [parent control-panel]
-     [label "Time Series"]
+     [label "Settings"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
-		 (toggle-plot)
-		 (send plot-canvas on-paint))])
+		 (send collection-panel reparent hidden-frame)
+		 (send results-panel reparent hidden-frame)
+		 (send settings-panel reparent visuals-panel))])
 
-;;; This determines the contents of the tab-panel based on which tab
+;;; This determines the contents of the results-panel based on which tab
 ;;; the user has clicked
-(define (update-tab-panel)
-  (let* ([tab-number (send tab-panel get-selection)]
-	 [tab-name (send tab-panel get-item-label tab-number)])
+(define (update-results-panel)
+  (let* ([tab-number (send results-panel get-selection)]
+	 [tab-name (send results-panel get-item-label tab-number)])
     (cond [(string=? tab-name "#Hashtags")
 	   (send/apply hashtag-table set hashtag-data)
 	   (send plot-canvas reparent hidden-frame)
 	   (send users-table reparent hidden-frame)
-	   (send hashtag-table reparent tab-panel)]
+	   (send hashtag-table reparent results-panel)]
 	  [(string=? tab-name "@Users")
 	   (send/apply users-table set users-data)
 	   (send plot-canvas reparent hidden-frame)
 	   (send hashtag-table reparent hidden-frame)
-	   (send users-table reparent tab-panel)]
+	   (send users-table reparent results-panel)]
 	  [(string=? tab-name "Time Series")
 	   (send hashtag-table reparent hidden-frame)
 	   (send users-table reparent hidden-frame)
-	   (send plot-canvas reparent tab-panel)])))
+	   (send plot-canvas reparent results-panel)])))
 
-(define tab-panel (new tab-panel%
-                       (parent control-panel)
-                       (choices (list "#Hashtags"
-                                      "@Users"
-                                      "Time Series"))
-		       (callback
-			(λ (b e)
-			  (update-tab-panel)))))
+(define results-panel
+  (new tab-panel%
+       (parent hidden-frame)       
+       (choices (list "#Hashtags"
+		      "@Users"
+		      "Time Series"))
+       (callback
+	(λ (b e)
+	  (update-results-panel)))))
+
+(define collection-panel
+  (new panel%
+       (parent hidden-frame)))
+
+;;; App settings panel -------------------------------------------
+(define (set-working-directory)
+  (let ([choice (get-directory "Choose working directory"
+			       main-frame
+			       (current-directory))])
+    (when choice
+      (current-directory choice)
+      (send CWD-message set-label (path->string choice)))))
+
+(define settings-panel
+  (new panel%
+       (parent hidden-frame)))
+
+(define system-info
+  (new horizontal-panel%
+       [parent settings-panel]))
+
+;;; Buttons for settings panel
+(new button% [parent system-info]
+     [label "Set"]
+      ; Callback procedure for a button click:
+     [callback (lambda (button event)
+		 (set-working-directory))])
+
+(define CWD-message
+  (new message%
+       [parent system-info]
+       [label (path->string (current-directory))]))
 
 (define plot-canvas
-  (new canvas% [parent hidden-frame]
+  (new canvas%
+       [parent hidden-frame]       
        [paint-callback
 	(λ (canvas dc)
 	  (if (plot?)
@@ -109,19 +169,19 @@
 
 (define hashtag-table
   (new list-box%
-       [parent tab-panel]
+       [parent results-panel]
        [label #f]
        [choices (list )]
-       [style (list 'single 'column-headers 'variable-columns)]
-       [columns (list "Hashtags" "frequency")]))
+       [style (list 'multiple 'column-headers 'variable-columns)]
+       [columns (list "Hashtag" "frequency")]))
 
 (define users-table
   (new list-box%
        [parent hidden-frame]
        [label #f]
        [choices (list )]
-       [style (list 'single 'column-headers 'variable-columns)]
-       [columns (list "User names" "frequency")]))
+       [style (list 'multiple 'column-headers 'variable-columns)]
+       [columns (list "User" "frequency")]))
 
 ;;; Results -------------------------------------------------
 
