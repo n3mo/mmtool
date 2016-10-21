@@ -14,18 +14,83 @@
 ;;; things, such as window resizing trigger this, but you can force it
 ;;; to happen immediately with (send plot-canvas on-paint)
 
-;;; Control parameters -------------------------------------------------
-(define plot? (make-parameter #f))
-
-;;; Toggles
-(define (toggle-plot)
-  (if (plot?)
-      (plot? #f)
-      (plot? #t)))
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;               Parameters
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Overall window sizing
 (define gui-width (make-parameter 800))
 (define gui-height (make-parameter 600))
+
+;;; The current file selected by the user for data
+;;; analysis/processing.
+(define active-data-file (make-parameter #f))
+;;; The current active data file's data type (i.e., is the data from
+;;; twitter-stream, wikipedia-text, etc.)
+(define active-data-type (make-parameter #f))
+
+;; (define (active-data-file [file-name #f])
+;;   (if file-name
+;;       ;; User has entered a file path for data analysis. Save the
+;;       ;; path.
+;;       (with-output-to-file (active-file-path)
+;; 	(λ () (write file-name))
+;; 	#:exists 'replace)
+;;       ;; No filename has been supplied. This is a request for the last
+;;       ;; active file path
+;;       (if (file-exists? (active-file-path))
+;; 	  (with-input-from-file (active-file-path)
+;; 	    (λ () (read)))
+;; 	  ;; No active file has ever existed. Return false
+;; 	  #f)))
+
+;;; Is massmine installed and available on the user's path (as
+;;; detected by mmtool?). We assume no, but check below. If installed,
+;;; this parameter is set to the version number of the installed
+;;; massmine executable
+(define massmine? (make-parameter #f))
+
+;;; The results of each analysis task are stored in global variables
+;;; so that the user can revisit the result after navigating to other
+;;; resources in the application. These must be set! by analysis
+;;; threads
+(define massmine-result #f)
+(define hashtags-result #f)
+(define user-mentions-result #f)
+(define time-series-result #f)
+
+;;; Each analysis task runs in its own thread. Because nothing
+;;; visually happens while an analysis task is running, it would be
+;;; useful to provide visual confirmation to the user that a thread is
+;;; running. Each task has its own aptly-named thread. Use
+;;; (thread-running? <thread>) to see if things are still running. If
+;;; so, this should be highlighted on the results page (or somewhere)
+(define massmine-thread (make-parameter #f))
+(define hashtags-thread (make-parameter #f))
+(define user-mentions-thread (make-parameter #f))
+(define time-series-thread (make-parameter #f))
+
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;               Helper Functions
+;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; String shortener for GUI messages
+(define (GUI-trim-string str n)
+  (let ([len (string-length str)]
+	[chars (string->list str)]
+	[tokens (round (/ (- n 3) 2))])
+    (cond [(<= len n) str]
+	  [(odd? n)
+	   (list->string
+	    (append (take chars tokens)
+		    '(#\. #\. #\.)
+		    (take (drop chars (+ tokens 3)) tokens)))]
+	  [else
+	   (list->string
+	    (append (take chars (sub1 tokens))
+		    '(#\. #\. #\.)
+		    (take (drop chars (+ tokens 3)) tokens)))])))
+
 
 ;;; Example data for debugging -----------------------------------------
 
@@ -138,34 +203,63 @@
       (current-directory choice)
       (send CWD-message set-label (path->string choice)))))
 
+(define (set-active-data-file)
+  (let ([choice (get-file "Choose a data file"
+			       main-frame
+			       (current-directory))])
+    (when choice
+      (active-data-file choice)
+      (send ADF-message set-label (path->string choice)))))
+
+
 (define settings-panel
-  (new panel%
+  (new vertical-panel%
        (parent hidden-frame)))
 
-(define system-info
+;;; --------------------------------------------------------------
+(define CWD-info
   (new horizontal-panel%
        [parent settings-panel]))
 
 ;;; Buttons for settings panel
-(new button% [parent system-info]
+(new button% [parent CWD-info]
      [label "Set"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
 		 (set-working-directory))])
-
 (define CWD-message
   (new message%
-       [parent system-info]
+       [parent CWD-info]
+       [auto-resize #t]
        [label (path->string (current-directory))]))
+;;; --------------------------------------------------------------
+
+;;; --------------------------------------------------------------
+(define ADF-info
+  (new horizontal-panel%
+       [parent settings-panel]))
+
+;;; Buttons for settings panel
+(new button% [parent ADF-info]
+     [label "Set"]
+      ; Callback procedure for a button click:
+     [callback (lambda (button event)
+		 (set-active-data-file))])
+(define ADF-message
+  (new message%
+       [parent ADF-info]
+       [auto-resize #t]
+       [label (if (active-data-file)
+		  (path->string (active-data-file))
+		  "none selected")]))
+;;; --------------------------------------------------------------
 
 (define plot-canvas
   (new canvas%
        [parent hidden-frame]       
        [paint-callback
 	(λ (canvas dc)
-	  (if (plot?)
-	      (send dc draw-bitmap render-plot 0 0)
-	      (send dc clear)))]))
+	  (send dc draw-bitmap render-plot 0 0))]))
 
 (define hashtag-table
   (new list-box%
@@ -202,50 +296,50 @@
 ;;; EXAMPLES IDEAS BELOW
 
 ;;; Plot a bitmap to a gui canvase
-(define render-plot
-  (parameterize ([plot-width 300]
-		 [plot-height 300])
-      (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
-(define frame (new frame%
-                   [label "Example"]
-                   [width 300]
-                   [height 300]))
-(new canvas% [parent frame]
-	      [paint-callback
-	       (λ (canvas dc)
-		 (send dc draw-bitmap render-plot 0 0))])
-(send frame show #t)
+;; (define render-plot
+;;   (parameterize ([plot-width 300]
+;; 		 [plot-height 300])
+;;       (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
+;; (define frame (new frame%
+;;                    [label "Example"]
+;;                    [width 300]
+;;                    [height 300]))
+;; (new canvas% [parent frame]
+;; 	      [paint-callback
+;; 	       (λ (canvas dc)
+;; 		 (send dc draw-bitmap render-plot 0 0))])
+;; (send frame show #t)
 
-;;; inserting snips into GUI elements... use editor%
-;;; https://docs.racket-lang.org/gui/editor-overview.html?q=send
+;; ;;; inserting snips into GUI elements... use editor%
+;; ;;; https://docs.racket-lang.org/gui/editor-overview.html?q=send
 
-(define f (new frame% [label "Simple Edit"]
-                      [width 200]
-                      [height 200]))
-(define c (new editor-canvas% [parent f]))
-(define t (new text%))
-(send c set-editor t)
-(send f show #t)
-(define pb (new pasteboard%))
-(send c set-editor pb)
-(define p (plot-snip (function (distribution-pdf (normal-dist 0 2)) -5 5)))
+;; (define f (new frame% [label "Simple Edit"]
+;;                       [width 200]
+;;                       [height 200]))
+;; (define c (new editor-canvas% [parent f]))
+;; (define t (new text%))
+;; (send c set-editor t)
+;; (send f show #t)
+;; (define pb (new pasteboard%))
+;; (send c set-editor pb)
+;; (define p (plot-snip (function (distribution-pdf (normal-dist 0 2)) -5 5)))
 
-(send pb insert p)
+;; (send pb insert p)
 
 
-;;; To make a table of data, say from the hashtahs analysis task:
-(define frame (new frame% 
-                  [label "myTable"]
-                  [width 800]
-                  [height 600]))
+;; ;;; To make a table of data, say from the hashtahs analysis task:
+;; (define frame (new frame% 
+;;                   [label "myTable"]
+;;                   [width 800]
+;;                   [height 600]))
 
-(define table (new list-box%
-                 [parent frame]
-                 [choices (list )]
-                 [label "Test"]
-                 [style (list 'single 'column-headers 'variable-columns)]
-                 [columns (list "Hashtags" "frequency")]))
+;; (define table (new list-box%
+;;                  [parent frame]
+;;                  [choices (list )]
+;;                  [label "Test"]
+;;                  [style (list 'single 'column-headers 'variable-columns)]
+;;                  [columns (list "Hashtags" "frequency")]))
 
-(define data '(("#love" "#hate" "#war") ("15" "10" "8")))
-(send/apply table set data)
-(send frame show #t)
+;; (define data '(("#love" "#hate" "#war") ("15" "10" "8")))
+;; (send/apply table set data)
+;; (send frame show #t)
