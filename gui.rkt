@@ -75,21 +75,27 @@
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; String shortener for GUI messages
-(define (GUI-trim-string str n)
+(define (GUI-trim-string str n [file? #f])
   (let ([len (string-length str)]
 	[chars (string->list str)]
 	[tokens (round (/ (- n 3) 2))])
-    (cond [(<= len n) str]
-	  [(odd? n)
-	   (list->string
-	    (append (take chars tokens)
-		    '(#\. #\. #\.)
-		    (take (drop chars (+ tokens 3)) tokens)))]
-	  [else
-	   (list->string
-	    (append (take chars (sub1 tokens))
-		    '(#\. #\. #\.)
-		    (take (drop chars (+ tokens 3)) tokens)))])))
+    (if file?
+	;; For files, truncate the start of the file path
+	(list->string
+	 (append '(#\. #\. #\.)
+		 (reverse (take (reverse chars) (- n 3)))))
+	;; For directories, preserve the beginning and end of paths
+	(cond [(<= len n) str]
+	      [(odd? n)
+	       (list->string
+		(append (take chars tokens)
+			'(#\. #\. #\.)
+			(reverse (take (reverse chars) tokens))))]
+	      [else
+	       (list->string
+		(append (take chars (sub1 tokens))
+			'(#\. #\. #\.)
+			(reverse (take (reverse chars) tokens))))]))))
 
 
 ;;; Example data for debugging -----------------------------------------
@@ -124,7 +130,7 @@
        [alignment '(center top)]))
 
 ;;; Main control parameter for button interface
-(define control-panel (new vertical-panel% [parent main-panel]
+(define control-panel (new horizontal-panel% [parent main-panel]
 			   [alignment '(center top)]
 			   [min-width (round (/ (gui-width) 2))]))
 
@@ -144,6 +150,14 @@
      [callback (lambda (button event)
 		 (send results-panel reparent hidden-frame)
 		 (send settings-panel reparent hidden-frame)
+		 (send collection-panel reparent visuals-panel))])
+(new button% [parent control-panel]
+     [label "Data Viewer"]
+      ; Callback procedure for a button click:
+     [callback (lambda (button event)
+		 (send results-panel reparent hidden-frame)
+		 (send settings-panel reparent hidden-frame)
+		 (send collection-panel reparent hidden-frame)
 		 (send collection-panel reparent visuals-panel))])
 (new button% [parent control-panel]
      [label "Analysis"]
@@ -201,7 +215,8 @@
 			       (current-directory))])
     (when choice
       (current-directory choice)
-      (send CWD-message set-label (path->string choice)))))
+      (send CWD-message set-label
+	    (GUI-trim-string (path->string choice) 15)))))
 
 (define (set-active-data-file)
   (let ([choice (get-file "Choose a data file"
@@ -209,7 +224,8 @@
 			       (current-directory))])
     (when choice
       (active-data-file choice)
-      (send ADF-message set-label (path->string choice)))))
+      (send ADF-message set-label
+	    (GUI-trim-string (path->string choice) 15 #t)))))
 
 
 (define settings-panel
@@ -231,7 +247,7 @@
   (new message%
        [parent CWD-info]
        [auto-resize #t]
-       [label (path->string (current-directory))]))
+       [label (GUI-trim-string (path->string (current-directory)) 15)]))
 ;;; --------------------------------------------------------------
 
 ;;; --------------------------------------------------------------
