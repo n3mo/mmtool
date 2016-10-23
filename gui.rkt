@@ -105,7 +105,8 @@
 
 (define render-plot
   (parameterize ([plot-width 300]
-		 [plot-height 300])
+		 [plot-height 300]
+		 [plot-background "white"])
       (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
 
 
