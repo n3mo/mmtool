@@ -180,13 +180,22 @@
 ;;; memory). But this is useful for arranging our data properly for
 ;;; the JSON viewer in the GUI app. If `head` is a number, only that
 ;;; many JSON lines are returned in the resulting array
+;; (define (json-lines->json-array #:head [head #f])
+;;   (let loop ([num 0]
+;;              [json-array '()]
+;; 	     [record (read-json (current-input-port))])
+;;     (if (or (eof-object? record)
+;;             (and head (>= num head)))
+;; 	(jsexpr->string json-array)
+;; 	(loop (add1 num) (cons record json-array)
+;; 	      (read-json (current-input-port))))))
 (define (json-lines->json-array #:head [head #f])
   (let loop ([num 0]
              [json-array '()]
 	     [record (read-json (current-input-port))])
     (if (or (eof-object? record)
             (and head (>= num head)))
-	(jsexpr->string json-array)
+	json-array
 	(loop (add1 num) (cons record json-array)
 	      (read-json (current-input-port))))))
 
