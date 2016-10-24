@@ -36,14 +36,14 @@
 ;;; massmine executable
 (define massmine? (make-parameter #f))
 
-;;; The results of each analysis task are stored in global variables
-;;; so that the user can revisit the result after navigating to other
-;;; resources in the application. These must be set! by analysis
+;;; The results of each analysis task are stored in parameters so that
+;;; the user can revisit the result after navigating to other
+;;; resources in the application. These must be set by analysis
 ;;; threads
-(define massmine-result #f)
+(define massmine-result (make-parameter #f))
 (define hashtags-result #f)
-(define user-mentions-result #f)
-(define time-series-result #f)
+(define user-mentions-result (make-parameter #f))
+(define time-series-result (make-parameter #f))
 
 ;;; Data viewer. We try to NOT load a user's entire data set into
 ;;; memory. However, for the data viewer it is advantageous to
@@ -101,6 +101,22 @@
 			'(#\. #\. #\.)
 			(reverse (take (reverse chars) tokens))))]))))
 
+;;; When a new data file is loaded, we can automatically queue up
+;;; requested analyses
+(define (update-analyses)
+  ;; Update hashtags
+  (hashtags-thread
+   (thread (λ ()
+	     (task 'GUI-hashtags)
+	     (set! hashtags-result
+	       (let ([result (process-data (active-data-file))])
+		 (list (map car result) (map number->string (map cdr result)))))
+	     ;; Hashtags have been updated. Refresh the results table
+	     ;; in case it's visible (otherwise the results won't
+	     ;; refresh until the user manually selects the
+	     ;; appropriate results tab
+	     (send/apply hashtag-table set hashtags-result)))))
+
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
 ;;; trigger the generation of new analyses, etc.
@@ -126,7 +142,10 @@
 	(string-append
 	 (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
 	 "/"
-	 (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0"))))
+	 (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0")))
+  ;; Simple visuals are parameters are set. Now we can queue up any
+  ;; analyses that need to run
+  (update-analyses))
 
 ;;; This allows the user to navigate with "previous" and "next"
 ;;; through their data set using the data viewer. Input parameter i
@@ -153,7 +172,7 @@
 
 ;;; Example data for debugging -----------------------------------------
 
-(define hashtag-data '(("#love" "#hate" "#war") ("15" "10" "8")))
+;; (define hashtags-result '(("#love" "#hate" "#war") ("15" "10" "8")))
 (define users-data '(("@nemo" "@aaron" "@evie") ("24" "10" "7")))
 
 (define render-plot
@@ -207,7 +226,7 @@
 		 (send viewer-panel reparent hidden-frame)
 		 (send collection-panel reparent visuals-panel))])
 (new button% [parent control-panel]
-     [label "Data Viewer"]
+     [label "Viewer"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
 		 (send results-panel reparent hidden-frame)
@@ -237,7 +256,7 @@
   (let* ([tab-number (send results-panel get-selection)]
 	 [tab-name (send results-panel get-item-label tab-number)])
     (cond [(string=? tab-name "#Hashtags")
-	   (send/apply hashtag-table set hashtag-data)
+	   (when hashtags-result (send/apply hashtag-table set hashtags-result))
 	   (send plot-canvas reparent hidden-frame)
 	   (send users-table reparent hidden-frame)
 	   (send hashtag-table reparent results-panel)]
