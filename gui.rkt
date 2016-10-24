@@ -1,6 +1,18 @@
-(require racket/gui)
+(require (except-in racket/gui
+		    make-date
+		    date?
+		    date-year-day
+		    date-year
+		    date-week-day
+		    date-second
+		    date-month
+		    date-minute
+		    date-hour
+		    date-day))
 (require plot)
-(require math)
+(require (only-in math
+		  distribution-pdf
+		  normal-dist))
 (require json)
 
 ;;; Useful tricks -------------------------------------------------
@@ -79,376 +91,365 @@
 (define user-mentions-thread (make-parameter #f))
 (define time-series-thread (make-parameter #f))
 
+;;; This is the GUI. Start here
+(define (start-gui)
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;               Helper Functions
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; String shortener for GUI messages
-(define (GUI-trim-string str n [file? #f])
-  (let ([len (string-length str)]
-	[chars (string->list str)]
-	[tokens (round (/ (- n 3) 2))])
-    (if file?
-	;; For files, truncate the start of the file path
-	(list->string
-	 (append '(#\. #\. #\.)
-		 (reverse (take (reverse chars) (- n 3)))))
-	;; For directories, preserve the beginning and end of paths
-	(cond [(<= len n) str]
-	      [(odd? n)
-	       (list->string
-		(append (take chars tokens)
-			'(#\. #\. #\.)
-			(reverse (take (reverse chars) tokens))))]
-	      [else
-	       (list->string
-		(append (take chars (sub1 tokens))
-			'(#\. #\. #\.)
-			(reverse (take (reverse chars) tokens))))]))))
+  (define (GUI-trim-string str n [file? #f])
+    (let ([len (string-length str)]
+	  [chars (string->list str)]
+	  [tokens (round (/ (- n 3) 2))])
+      (if file?
+	  ;; For files, truncate the start of the file path
+	  (list->string
+	   (append '(#\. #\. #\.)
+		   (reverse (take (reverse chars) (- n 3)))))
+	  ;; For directories, preserve the beginning and end of paths
+	  (cond [(<= len n) str]
+		[(odd? n)
+		 (list->string
+		  (append (take chars tokens)
+			  '(#\. #\. #\.)
+			  (reverse (take (reverse chars) tokens))))]
+		[else
+		 (list->string
+		  (append (take chars (sub1 tokens))
+			  '(#\. #\. #\.)
+			  (reverse (take (reverse chars) tokens))))]))))
 
 ;;; When a new data file is loaded, we can automatically queue up
 ;;; requested analyses
-(define (update-analyses)
-  ;; Update hashtags
-  (hashtags-thread
-   (thread (λ ()
-	     (task 'GUI-hashtags)
-	     (set! hashtags-result
-	       (let ([result (process-data (active-data-file))])
-		 (list (map car result) (map number->string (map cdr result)))))
-	     ;; Hashtags have been updated. Refresh the results table
-	     ;; in case it's visible (otherwise the results won't
-	     ;; refresh until the user manually selects the
-	     ;; appropriate results tab
-	     (send/apply hashtag-table set hashtags-result))))
+  (define (update-analyses)
+    ;; Update hashtags
+    (hashtags-thread
+     (thread (λ ()
+	       (task 'GUI-hashtags)
+	       (set! hashtags-result
+		 (let ([result (process-data (active-data-file))])
+		   (list (map car result) (map number->string (map cdr result)))))
+	       ;; Hashtags have been updated. Refresh the results table
+	       ;; in case it's visible (otherwise the results won't
+	       ;; refresh until the user manually selects the
+	       ;; appropriate results tab
+	       (send/apply hashtag-table set hashtags-result))))
 
-  ;; Update @users
-  (user-mentions-thread
-   (thread (λ ()
-	     (task 'GUI-user-mentions)
-	     (set! user-mentions-result
-	       (let ([result (process-data (active-data-file))])
-		 (list (map car result) (map number->string (map cdr result)))))
-	     ;; @user names have been updated. Refresh the results
-	     ;; table in case it's visible (otherwise the results
-	     ;; won't refresh until the user manually selects the
-	     ;; appropriate results tab
-	     (send/apply users-table set user-mentions-result))))
+    ;; Update @users
+    (user-mentions-thread
+     (thread (λ ()
+	       (task 'GUI-user-mentions)
+	       (set! user-mentions-result
+		 (let ([result (process-data (active-data-file))])
+		   (list (map car result) (map number->string (map cdr result)))))
+	       ;; @user names have been updated. Refresh the results
+	       ;; table in case it's visible (otherwise the results
+	       ;; won't refresh until the user manually selects the
+	       ;; appropriate results tab
+	       (send/apply users-table set user-mentions-result))))
 
-  ;; Update time series plot
-  (time-series-thread
-   (thread (λ ()
-	     (task 'GUI-plot-time-series)
-	     (set! time-series-result
-	       (process-data (active-data-file)))
-	     ;; Plot updated. Let the drawing canvas know
-	     (send plot-canvas on-paint)))))
+    ;; Update time series plot
+    (time-series-thread
+     (thread (λ ()
+	       (task 'GUI-plot-time-series)
+	       (set! time-series-result
+		 (process-data (active-data-file)))
+	       ;; Plot updated. Let the drawing canvas know
+	       (send plot-canvas on-paint)))))
 
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
 ;;; trigger the generation of new analyses, etc.
-(define (data-file-update)
-  ;; Read in the first n entries from the data file for use in the
-  ;; data viewer
-  (data-file-preview
-   (with-input-from-file (active-data-file)
-     (λ ()
-       (json-lines->json-array #:head (data-viewer-max)))))
-  (data-viewer-content (first (data-file-preview)))
-  (data-viewer-idx 0)
-  (send (send viewer-field get-editor) erase)
-  ;; (send (send viewer-field get-editor) insert (jsexpr->string (data-viewer-content))))
-  (send (send viewer-field get-editor)
-	insert
-	(with-output-to-string (λ () (pretty-print (data-viewer-content)))))
-  (send (send viewer-field get-editor)
-	    move-position
-	    'home)
-  (send viewer-counter
-	set-label
-	(string-append
-	 (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
-	 "/"
-	 (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0")))
-  ;; Simple visuals are parameters are set. Now we can queue up any
-  ;; analyses that need to run
-  (update-analyses))
+  (define (data-file-update)
+    ;; Read in the first n entries from the data file for use in the
+    ;; data viewer
+    (data-file-preview
+     (with-input-from-file (active-data-file)
+       (λ ()
+	 (json-lines->json-array #:head (data-viewer-max)))))
+    (data-viewer-content (first (data-file-preview)))
+    (data-viewer-idx 0)
+    (send (send viewer-field get-editor) erase)
+    ;; (send (send viewer-field get-editor) insert (jsexpr->string (data-viewer-content))))
+    (send (send viewer-field get-editor)
+	  insert
+	  (with-output-to-string (λ () (pretty-print (data-viewer-content)))))
+    (send (send viewer-field get-editor)
+	  move-position
+	  'home)
+    (send viewer-counter
+	  set-label
+	  (string-append
+	   (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
+	   "/"
+	   (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0")))
+    ;; Simple visuals are parameters are set. Now we can queue up any
+    ;; analyses that need to run
+    (update-analyses))
 
 ;;; This allows the user to navigate with "previous" and "next"
 ;;; through their data set using the data viewer. Input parameter i
 ;;; should be +1 for "next" item, or -1 for "previous" item
-(define (update-viewer i)
-  (let ([tmp (+ (data-viewer-idx) i)])
-    (when (and (active-data-file)
-	       (< tmp (length (data-file-preview)))
-	       (>= tmp 0))
-      (data-viewer-idx tmp)
-      (data-viewer-content (list-ref (data-file-preview) tmp))
-      (send (send viewer-field get-editor)
-	    insert
-	    (with-output-to-string (λ () (pretty-print (data-viewer-content)))))
-      (send (send viewer-field get-editor)
-	    move-position
-	    'home)
-      (send viewer-counter
-	    set-label
-	    (string-append
+  (define (update-viewer i)
+    (let ([tmp (+ (data-viewer-idx) i)])
+      (when (and (active-data-file)
+		 (< tmp (length (data-file-preview)))
+		 (>= tmp 0))
+	(data-viewer-idx tmp)
+	(data-viewer-content (list-ref (data-file-preview) tmp))
+	(send (send viewer-field get-editor)
+	      insert
+	      (with-output-to-string (λ () (pretty-print (data-viewer-content)))))
+	(send (send viewer-field get-editor)
+	      move-position
+	      'home)
+	(send viewer-counter
+	      set-label
+	      (string-append
 	       (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
 	       "/"
 	       (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0"))))))
 
-;;; Example data for debugging -----------------------------------------
-
-;; (define hashtags-result '(("#love" "#hate" "#war") ("15" "10" "8")))
-;; (define users-data '(("@nemo" "@aaron" "@evie") ("24" "10" "7")))
-
-;;; Default frame -------------------------------------------------
+  ;;; Default frame -------------------------------------------------
 ;;; Everything that the user is seeing goes here
-(define main-frame (new frame%
-			[label "MassMine Analytics"]
-			[width (gui-width)]
-			[height (gui-height)]))
+  (define main-frame (new frame%
+			  [label "MassMine Analytics"]
+			  [width (gui-width)]
+			  [height (gui-height)]))
 
 ;;; Hidden panel for putting things away. Most results windows will
 ;;; start their lives here
-(define hidden-frame
-  (new frame%
-       [label "Hidden Frame"]))
+  (define hidden-frame
+    (new frame%
+	 [label "Hidden Frame"]))
 
 ;;; Main panel that holds everything. This controls the overall
 ;;; layout, such that the controls are on the left, for example, and
 ;;; the visualizations are on the right.
-(define main-panel
-  (new horizontal-panel% [parent main-frame]
-       [alignment '(center top)]))
+  (define main-panel
+    (new horizontal-panel% [parent main-frame]
+	 [alignment '(center top)]))
 
 ;;; Main control parameter for button interface
-(define control-panel (new horizontal-panel% [parent main-panel]
-			   [alignment '(center top)]
-			   [min-width (round (/ (gui-width) 2))]))
+  (define control-panel (new horizontal-panel% [parent main-panel]
+			     [alignment '(center top)]
+			     [min-width (round (/ (gui-width) 2))]))
 
 ;;; Things that dynamically change with user interaction appear over
 ;;; here
-(define visuals-panel
-  (new panel%
-       [parent main-panel]
-       [style (list 'auto-vscroll 'auto-hscroll)]
-       [alignment '(center top)]
-       [min-width (round (/ (gui-width) 2))]))
+  (define visuals-panel
+    (new panel%
+	 [parent main-panel]
+	 [style (list 'auto-vscroll 'auto-hscroll)]
+	 [alignment '(center top)]
+	 [min-width (round (/ (gui-width) 2))]))
 
 ;;; Panel buttons
-(new button% [parent control-panel]
-     [label "Collection"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (send results-panel reparent hidden-frame)
-		 (send settings-panel reparent hidden-frame)
-		 (send viewer-panel reparent hidden-frame)
-		 (send collection-panel reparent visuals-panel))])
-(new button% [parent control-panel]
-     [label "Viewer"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (send results-panel reparent hidden-frame)
-		 (send settings-panel reparent hidden-frame)
-		 (send collection-panel reparent hidden-frame)
-		 (send viewer-panel reparent visuals-panel))])
-(new button% [parent control-panel]
-     [label "Analysis"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (send collection-panel reparent hidden-frame)
-		 (send settings-panel reparent hidden-frame)
-		 (send viewer-panel reparent hidden-frame)
-		 (send results-panel reparent visuals-panel))])
-(new button% [parent control-panel]
-     [label "Settings"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (send collection-panel reparent hidden-frame)
-		 (send results-panel reparent hidden-frame)
-		 (send viewer-panel reparent hidden-frame)
-		 (send settings-panel reparent visuals-panel))])
+  (new button% [parent control-panel]
+       [label "Collection"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (send results-panel reparent hidden-frame)
+		   (send settings-panel reparent hidden-frame)
+		   (send viewer-panel reparent hidden-frame)
+		   (send collection-panel reparent visuals-panel))])
+  (new button% [parent control-panel]
+       [label "Viewer"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (send results-panel reparent hidden-frame)
+		   (send settings-panel reparent hidden-frame)
+		   (send collection-panel reparent hidden-frame)
+		   (send viewer-panel reparent visuals-panel))])
+  (new button% [parent control-panel]
+       [label "Analysis"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (send collection-panel reparent hidden-frame)
+		   (send settings-panel reparent hidden-frame)
+		   (send viewer-panel reparent hidden-frame)
+		   (send results-panel reparent visuals-panel))])
+  (new button% [parent control-panel]
+       [label "Settings"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (send collection-panel reparent hidden-frame)
+		   (send results-panel reparent hidden-frame)
+		   (send viewer-panel reparent hidden-frame)
+		   (send settings-panel reparent visuals-panel))])
 
 ;;; This determines the contents of the results-panel based on which tab
 ;;; the user has clicked
-(define (update-results-panel)
-  (let* ([tab-number (send results-panel get-selection)]
-	 [tab-name (send results-panel get-item-label tab-number)])
-    (cond [(string=? tab-name "#Hashtags")
-	   (when hashtags-result (send/apply hashtag-table set hashtags-result))
-	   (send plot-canvas reparent hidden-frame)
-	   (send users-table reparent hidden-frame)
-	   (send hashtag-table reparent results-panel)]
-	  [(string=? tab-name "@Users")
-	   (when user-mentions-result
-	     (send/apply users-table set user-mentions-result))
-	   (send plot-canvas reparent hidden-frame)
-	   (send hashtag-table reparent hidden-frame)
-	   (send users-table reparent results-panel)]
-	  [(string=? tab-name "Time Series")
-	   (send hashtag-table reparent hidden-frame)
-	   (send users-table reparent hidden-frame)
-	   (send plot-canvas reparent results-panel)])))
+  (define (update-results-panel)
+    (let* ([tab-number (send results-panel get-selection)]
+	   [tab-name (send results-panel get-item-label tab-number)])
+      (cond [(string=? tab-name "#Hashtags")
+	     (when hashtags-result (send/apply hashtag-table set hashtags-result))
+	     (send plot-canvas reparent hidden-frame)
+	     (send users-table reparent hidden-frame)
+	     (send hashtag-table reparent results-panel)]
+	    [(string=? tab-name "@Users")
+	     (when user-mentions-result
+	       (send/apply users-table set user-mentions-result))
+	     (send plot-canvas reparent hidden-frame)
+	     (send hashtag-table reparent hidden-frame)
+	     (send users-table reparent results-panel)]
+	    [(string=? tab-name "Time Series")
+	     (send hashtag-table reparent hidden-frame)
+	     (send users-table reparent hidden-frame)
+	     (send plot-canvas reparent results-panel)])))
 
-(define results-panel
-  (new tab-panel%
-       (parent hidden-frame)       
-       (choices (list "#Hashtags"
-		      "@Users"
-		      "Time Series"))
-       (callback
-	(λ (b e)
-	  (update-results-panel)))))
+  (define results-panel
+    (new tab-panel%
+	 (parent hidden-frame)       
+	 (choices (list "#Hashtags"
+			"@Users"
+			"Time Series"))
+	 (callback
+	  (λ (b e)
+	    (update-results-panel)))))
 
-(define collection-panel
-  (new panel%
-       (parent hidden-frame)))
+  (define collection-panel
+    (new panel%
+	 (parent hidden-frame)))
 
 ;;; Data viewer panel -------------------------------------------
-(define viewer-panel
-  (new vertical-panel%
-       (parent hidden-frame)))
+  (define viewer-panel
+    (new vertical-panel%
+	 (parent hidden-frame)))
 
-(define viewer-field
-  (new text-field%
-       [parent viewer-panel]
-       [label #f]
-       [init-value ""]
-       [style (list 'multiple)]
-       [min-height (inexact->exact (round (* .75 (gui-height))))]))
+  (define viewer-field
+    (new text-field%
+	 [parent viewer-panel]
+	 [label #f]
+	 [init-value ""]
+	 [style (list 'multiple)]
+	 [min-height (inexact->exact (round (* .75 (gui-height))))]))
 ;;; Buttons for navigating through data file preview
-(define viewer-controls
-  (new horizontal-panel%
-       [parent viewer-panel]
-       [alignment (list 'center 'center)]))
+  (define viewer-controls
+    (new horizontal-panel%
+	 [parent viewer-panel]
+	 [alignment (list 'center 'center)]))
 
-(new button% [parent viewer-controls]
-     [label "Previous"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (update-viewer -1))])
-(define viewer-counter
-  (new message%
-       [parent viewer-controls]
-       [label (string-append
-	       (~r 0 #:min-width 3 #:pad-string "0")
-	       "/"
-	       (~r 0 #:min-width 3 #:pad-string "0"))]))
-(new button% [parent viewer-controls]
-     [label "Next"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (update-viewer +1))])
+  (new button% [parent viewer-controls]
+       [label "Previous"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (update-viewer -1))])
+  (define viewer-counter
+    (new message%
+	 [parent viewer-controls]
+	 [label (string-append
+		 (~r 0 #:min-width 3 #:pad-string "0")
+		 "/"
+		 (~r 0 #:min-width 3 #:pad-string "0"))]))
+  (new button% [parent viewer-controls]
+       [label "Next"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (update-viewer +1))])
 
-(send (send viewer-field get-editor) insert "Select a data file to view")
+  (send (send viewer-field get-editor) insert "Select a data file to view")
 
 ;;;  ------------------------------------------------------------
 
 
 ;;; App settings panel -------------------------------------------
-(define (set-working-directory)
-  (let ([choice (get-directory "Choose working directory"
-			       main-frame
-			       (current-directory))])
-    (when choice
-      (current-directory choice)
-      (send CWD-message set-label
-	    (GUI-trim-string (path->string choice) 15)))))
+  (define (set-working-directory)
+    (let ([choice (get-directory "Choose working directory"
+				 main-frame
+				 (current-directory))])
+      (when choice
+	(current-directory choice)
+	(send CWD-message set-label
+	      (GUI-trim-string (path->string choice) 15)))))
 
-(define (set-active-data-file)
-  (let ([choice (get-file "Choose a data file"
-			       main-frame
-			       (current-directory))])
-    (when choice
-      (active-data-file choice)
-      (send ADF-message set-label
-	    (GUI-trim-string (path->string choice) 15 #t))
-      ;; The following function handles all internal changes related
-      ;; to the selection of a new data file
-      (data-file-update))))
+  (define (set-active-data-file)
+    (let ([choice (get-file "Choose a data file"
+			    main-frame
+			    (current-directory))])
+      (when choice
+	(active-data-file choice)
+	(send ADF-message set-label
+	      (GUI-trim-string (path->string choice) 15 #t))
+	;; The following function handles all internal changes related
+	;; to the selection of a new data file
+	(data-file-update))))
 
 
-(define settings-panel
-  (new vertical-panel%
-       (parent hidden-frame)))
+  (define settings-panel
+    (new vertical-panel%
+	 (parent hidden-frame)))
 
 ;;; --------------------------------------------------------------
-(define CWD-info
-  (new horizontal-panel%
-       [parent settings-panel]))
+  (define CWD-info
+    (new horizontal-panel%
+	 [parent settings-panel]))
 
 ;;; Buttons for settings panel
-(new button% [parent CWD-info]
-     [label "Set"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (set-working-directory))])
-(define CWD-message
+  (new button% [parent CWD-info]
+       [label "Set"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (set-working-directory))])
+  (define CWD-message
     (new message%
-       [parent CWD-info]
-       [auto-resize #t]
-       [label (GUI-trim-string (path->string (current-directory)) 15)]))
+	 [parent CWD-info]
+	 [auto-resize #t]
+	 [label (GUI-trim-string (path->string (current-directory)) 15)]))
 ;;; --------------------------------------------------------------
 
 ;;; --------------------------------------------------------------
-(define ADF-info
-  (new horizontal-panel%
-       [parent settings-panel]))
+  (define ADF-info
+    (new horizontal-panel%
+	 [parent settings-panel]))
 
 ;;; Buttons for settings panel
-(new button% [parent ADF-info]
-     [label "Set"]
-      ; Callback procedure for a button click:
-     [callback (lambda (button event)
-		 (set-active-data-file))])
-(define ADF-message
-  (new message%
-       [parent ADF-info]
-       [auto-resize #t]
-       [label (if (active-data-file)
-		  (path->string (active-data-file))
-		  "none selected")]))
+  (new button% [parent ADF-info]
+       [label "Set"]
+					; Callback procedure for a button click:
+       [callback (lambda (button event)
+		   (set-active-data-file))])
+  (define ADF-message
+    (new message%
+	 [parent ADF-info]
+	 [auto-resize #t]
+	 [label (if (active-data-file)
+		    (path->string (active-data-file))
+		    "none selected")]))
 ;;; --------------------------------------------------------------
 
-(define plot-canvas
-  (new canvas%
-       [parent hidden-frame]       
-       [paint-callback
-	(λ (canvas dc)
-	  (send dc draw-bitmap time-series-result 0 0))]))
+  (define plot-canvas
+    (new canvas%
+	 [parent hidden-frame]       
+	 [paint-callback
+	  (λ (canvas dc)
+	    (send dc draw-bitmap time-series-result 0 0))]))
 
-(define hashtag-table
-  (new list-box%
-       [parent results-panel]
-       [label #f]
-       [choices (list )]
-       [style (list 'multiple 'column-headers 'variable-columns)]
-       [columns (list "Hashtag" "frequency")]))
+  (define hashtag-table
+    (new list-box%
+	 [parent results-panel]
+	 [label #f]
+	 [choices (list )]
+	 [style (list 'multiple 'column-headers 'variable-columns)]
+	 [columns (list "Hashtag" "frequency")]))
 
-(define users-table
-  (new list-box%
-       [parent hidden-frame]
-       [label #f]
-       [choices (list )]
-       [style (list 'multiple 'column-headers 'variable-columns)]
-       [columns (list "User" "frequency")]))
+  (define users-table
+    (new list-box%
+	 [parent hidden-frame]
+	 [label #f]
+	 [choices (list )]
+	 [style (list 'multiple 'column-headers 'variable-columns)]
+	 [columns (list "User" "frequency")]))
 
 ;;; Results -------------------------------------------------
 
 
 ;;; Show the main frame
-(send main-frame show #t)
-
+  (send main-frame show #t))
 
 ;;; END OF GUI CODE -----------------------------------------------------
-
-
-
-
-
-
-
 
 ;;; EXAMPLES IDEAS BELOW
 

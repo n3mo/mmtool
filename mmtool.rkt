@@ -13,7 +13,8 @@
 (require (except-in racket/date date->string))
 (require (except-in srfi/19 current-date))
 
-(include "server.rkt")
+;; (include "server.rkt")
+(include "gui.rkt")
 
 ;;; Current version
 (define mmtool-version "0.0.1 (2016-06-01)")
@@ -503,7 +504,7 @@
 	  [(equal? units 'year) '("~Y")]
 	  [else "~H:~M:~S"])])
     (parameterize ([plot-x-ticks (date-ticks #:formats ticks-format)]
-		   [plot-width 300]
+		   [plot-width 400]
 		   [plot-height 300])
       (plot-bitmap
        (list
