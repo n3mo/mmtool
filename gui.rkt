@@ -40,10 +40,10 @@
 ;;; the user can revisit the result after navigating to other
 ;;; resources in the application. These must be set by analysis
 ;;; threads
-(define massmine-result (make-parameter #f))
+(define massmine-result #f)
 (define hashtags-result #f)
-(define user-mentions-result (make-parameter #f))
-(define time-series-result (make-parameter #f))
+(define user-mentions-result #f)
+(define time-series-result #f)
 
 ;;; Data viewer. We try to NOT load a user's entire data set into
 ;;; memory. However, for the data viewer it is advantageous to
@@ -115,7 +115,20 @@
 	     ;; in case it's visible (otherwise the results won't
 	     ;; refresh until the user manually selects the
 	     ;; appropriate results tab
-	     (send/apply hashtag-table set hashtags-result)))))
+	     (send/apply hashtag-table set hashtags-result))))
+
+  ;; Update @users
+  (user-mentions-thread
+   (thread (λ ()
+	     (task 'GUI-user-mentions)
+	     (set! user-mentions-result
+	       (let ([result (process-data (active-data-file))])
+		 (list (map car result) (map number->string (map cdr result)))))
+	     ;; @user names have been updated. Refresh the results
+	     ;; table in case it's visible (otherwise the results
+	     ;; won't refresh until the user manually selects the
+	     ;; appropriate results tab
+	     (send/apply users-table set user-mentions-result)))))
 
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
@@ -173,7 +186,7 @@
 ;;; Example data for debugging -----------------------------------------
 
 ;; (define hashtags-result '(("#love" "#hate" "#war") ("15" "10" "8")))
-(define users-data '(("@nemo" "@aaron" "@evie") ("24" "10" "7")))
+;; (define users-data '(("@nemo" "@aaron" "@evie") ("24" "10" "7")))
 
 (define render-plot
   (parameterize ([plot-width 300]
@@ -261,7 +274,8 @@
 	   (send users-table reparent hidden-frame)
 	   (send hashtag-table reparent results-panel)]
 	  [(string=? tab-name "@Users")
-	   (send/apply users-table set users-data)
+	   (when user-mentions-result
+	     (send/apply users-table set user-mentions-result))
 	   (send plot-canvas reparent hidden-frame)
 	   (send hashtag-table reparent hidden-frame)
 	   (send users-table reparent results-panel)]

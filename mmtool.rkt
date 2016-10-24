@@ -308,17 +308,28 @@
 			 (λ (x y) (> (cdr x) (cdr y)))))])
     (if (and (use-cache?) user-names)
 	;; Use cached data
-	`(table ((class "table table-striped table-hover"))
-		(tr (th "User Name") (th "Frequency"))
-		,@(map (λ (x) `(tr (td ,(car x))
-				   (td ,(number->string (cdr x)))))
-		       (f user-names)))
+        (f user-names)
 	;; No cache. Calculate using raw data
-	`(table ((class "table table-striped table-hover"))
-		(tr (th "User Name") (th "Frequency"))
-		,@(map (λ (x) `(tr (td ,(car x))
-				   (td ,(number->string (cdr x)))))
-		       (f (find-usernames-by-record)))))))
+        (f (find-usernames-by-record)))))
+
+;;; Original method for web gui
+;; (define (web-GUI-user-mentions)
+;;   (let ([user-names (hash-ref (cache) 'usernames #f)]
+;; 	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
+;; 			 (λ (x y) (> (cdr x) (cdr y)))))])
+;;     (if (and (use-cache?) user-names)
+;; 	;; Use cached data
+;; 	`(table ((class "table table-striped table-hover"))
+;; 		(tr (th "User Name") (th "Frequency"))
+;; 		,@(map (λ (x) `(tr (td ,(car x))
+;; 				   (td ,(number->string (cdr x)))))
+;; 		       (f user-names)))
+;; 	;; No cache. Calculate using raw data
+;; 	`(table ((class "table table-striped table-hover"))
+;; 		(tr (th "User Name") (th "Frequency"))
+;; 		,@(map (λ (x) `(tr (td ,(car x))
+;; 				   (td ,(number->string (cdr x)))))
+;; 		       (f (find-usernames-by-record)))))))
 
 ;;; Get raw timestamp from JSON
 (define (json-get-raw-timestamps)
