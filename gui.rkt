@@ -1,6 +1,7 @@
 (require racket/gui)
 (require plot)
 (require math)
+(require json)
 
 ;;; Useful tricks -------------------------------------------------
 ;;; Use (send plot-canvas show #f) to hide a window, such as plot-canvas or
@@ -29,21 +30,6 @@
 ;;; twitter-stream, wikipedia-text, etc.)
 (define active-data-type (make-parameter #f))
 
-;; (define (active-data-file [file-name #f])
-;;   (if file-name
-;;       ;; User has entered a file path for data analysis. Save the
-;;       ;; path.
-;;       (with-output-to-file (active-file-path)
-;; 	(λ () (write file-name))
-;; 	#:exists 'replace)
-;;       ;; No filename has been supplied. This is a request for the last
-;;       ;; active file path
-;;       (if (file-exists? (active-file-path))
-;; 	  (with-input-from-file (active-file-path)
-;; 	    (λ () (read)))
-;; 	  ;; No active file has ever existed. Return false
-;; 	  #f)))
-
 ;;; Is massmine installed and available on the user's path (as
 ;;; detected by mmtool?). We assume no, but check below. If installed,
 ;;; this parameter is set to the version number of the installed
@@ -58,6 +44,24 @@
 (define hashtags-result #f)
 (define user-mentions-result #f)
 (define time-series-result #f)
+
+;;; Data viewer. We try to NOT load a user's entire data set into
+;;; memory. However, for the data viewer it is advantageous to
+;;; partially read the data set into memory (e.g., to allow for easily
+;;; browsing forward and backward through the data set. This parameter
+;;; determines how many records (e.g., tweets) to read into
+;;; memory. The user could conceivably change this
+(define data-viewer-max (make-parameter 50))
+;;; The first data-viewer-max lines of the data file are stored in the
+;;; following list
+(define data-file-preview (make-parameter #f))
+;;; The content of the data viewer is stored in memory in this
+;;; parameter. It typically holds 1 item from data-file-preview at a
+;;; time 
+(define data-viewer-content (make-parameter #f))
+;;; Current data record to show. This is used with list-ref to show
+;;; the current data record
+(define data-viewer-idx (make-parameter 0))
 
 ;;; Each analysis task runs in its own thread. Because nothing
 ;;; visually happens while an analysis task is running, it would be
@@ -97,6 +101,55 @@
 			'(#\. #\. #\.)
 			(reverse (take (reverse chars) tokens))))]))))
 
+;;; This function should be called whenever a new data file is set as
+;;; the active-data-file. It does things like update the data viewer,
+;;; trigger the generation of new analyses, etc.
+(define (data-file-update)
+  ;; Read in the first n entries from the data file for use in the
+  ;; data viewer
+  (data-file-preview
+   (with-input-from-file (active-data-file)
+     (λ ()
+       (json-lines->json-array #:head (data-viewer-max)))))
+  (data-viewer-content (first (data-file-preview)))
+  (data-viewer-idx 0)
+  (send (send viewer-field get-editor) erase)
+  ;; (send (send viewer-field get-editor) insert (jsexpr->string (data-viewer-content))))
+  (send (send viewer-field get-editor)
+	insert
+	(with-output-to-string (λ () (pretty-print (data-viewer-content)))))
+  (send (send viewer-field get-editor)
+	    move-position
+	    'home)
+  (send viewer-counter
+	set-label
+	(string-append
+	 (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
+	 "/"
+	 (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0"))))
+
+;;; This allows the user to navigate with "previous" and "next"
+;;; through their data set using the data viewer. Input parameter i
+;;; should be +1 for "next" item, or -1 for "previous" item
+(define (update-viewer i)
+  (let ([tmp (+ (data-viewer-idx) i)])
+    (when (and (active-data-file)
+	       (< tmp (length (data-file-preview)))
+	       (>= tmp 0))
+      (data-viewer-idx tmp)
+      (data-viewer-content (list-ref (data-file-preview) tmp))
+      (send (send viewer-field get-editor)
+	    insert
+	    (with-output-to-string (λ () (pretty-print (data-viewer-content)))))
+      (send (send viewer-field get-editor)
+	    move-position
+	    'home)
+      (send viewer-counter
+	    set-label
+	    (string-append
+	       (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
+	       "/"
+	       (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0"))))))
 
 ;;; Example data for debugging -----------------------------------------
 
@@ -151,6 +204,7 @@
      [callback (lambda (button event)
 		 (send results-panel reparent hidden-frame)
 		 (send settings-panel reparent hidden-frame)
+		 (send viewer-panel reparent hidden-frame)
 		 (send collection-panel reparent visuals-panel))])
 (new button% [parent control-panel]
      [label "Data Viewer"]
@@ -159,13 +213,14 @@
 		 (send results-panel reparent hidden-frame)
 		 (send settings-panel reparent hidden-frame)
 		 (send collection-panel reparent hidden-frame)
-		 (send collection-panel reparent visuals-panel))])
+		 (send viewer-panel reparent visuals-panel))])
 (new button% [parent control-panel]
      [label "Analysis"]
       ; Callback procedure for a button click:
      [callback (lambda (button event)
 		 (send collection-panel reparent hidden-frame)
 		 (send settings-panel reparent hidden-frame)
+		 (send viewer-panel reparent hidden-frame)
 		 (send results-panel reparent visuals-panel))])
 (new button% [parent control-panel]
      [label "Settings"]
@@ -173,6 +228,7 @@
      [callback (lambda (button event)
 		 (send collection-panel reparent hidden-frame)
 		 (send results-panel reparent hidden-frame)
+		 (send viewer-panel reparent hidden-frame)
 		 (send settings-panel reparent visuals-panel))])
 
 ;;; This determines the contents of the results-panel based on which tab
@@ -209,6 +265,47 @@
   (new panel%
        (parent hidden-frame)))
 
+;;; Data viewer panel -------------------------------------------
+(define viewer-panel
+  (new vertical-panel%
+       (parent hidden-frame)))
+
+(define viewer-field
+  (new text-field%
+       [parent viewer-panel]
+       [label #f]
+       [init-value ""]
+       [style (list 'multiple)]
+       [min-height (inexact->exact (round (* .75 (gui-height))))]))
+;;; Buttons for navigating through data file preview
+(define viewer-controls
+  (new horizontal-panel%
+       [parent viewer-panel]
+       [alignment (list 'center 'center)]))
+
+(new button% [parent viewer-controls]
+     [label "Previous"]
+      ; Callback procedure for a button click:
+     [callback (lambda (button event)
+		 (update-viewer -1))])
+(define viewer-counter
+  (new message%
+       [parent viewer-controls]
+       [label (string-append
+	       (~r 0 #:min-width 3 #:pad-string "0")
+	       "/"
+	       (~r 0 #:min-width 3 #:pad-string "0"))]))
+(new button% [parent viewer-controls]
+     [label "Next"]
+      ; Callback procedure for a button click:
+     [callback (lambda (button event)
+		 (update-viewer +1))])
+
+(send (send viewer-field get-editor) insert "Select a data file to view")
+
+;;;  ------------------------------------------------------------
+
+
 ;;; App settings panel -------------------------------------------
 (define (set-working-directory)
   (let ([choice (get-directory "Choose working directory"
@@ -226,7 +323,10 @@
     (when choice
       (active-data-file choice)
       (send ADF-message set-label
-	    (GUI-trim-string (path->string choice) 15 #t)))))
+	    (GUI-trim-string (path->string choice) 15 #t))
+      ;; The following function handles all internal changes related
+      ;; to the selection of a new data file
+      (data-file-update))))
 
 
 (define settings-panel
@@ -245,7 +345,7 @@
      [callback (lambda (button event)
 		 (set-working-directory))])
 (define CWD-message
-  (new message%
+    (new message%
        [parent CWD-info]
        [auto-resize #t]
        [label (GUI-trim-string (path->string (current-directory)) 15)]))
