@@ -43,7 +43,12 @@
 (define massmine-result #f)
 (define hashtags-result #f)
 (define user-mentions-result #f)
-(define time-series-result #f)
+;;; We include a default plot. 
+(define time-series-result
+  (parameterize ([plot-width 300]
+		 [plot-height 300]
+		 [plot-background "white"])
+    (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
 
 ;;; Data viewer. We try to NOT load a user's entire data set into
 ;;; memory. However, for the data viewer it is advantageous to
@@ -128,7 +133,16 @@
 	     ;; table in case it's visible (otherwise the results
 	     ;; won't refresh until the user manually selects the
 	     ;; appropriate results tab
-	     (send/apply users-table set user-mentions-result)))))
+	     (send/apply users-table set user-mentions-result))))
+
+  ;; Update time series plot
+  (time-series-thread
+   (thread (λ ()
+	     (task 'GUI-plot-time-series)
+	     (set! time-series-result
+	       (process-data (active-data-file)))
+	     ;; Plot updated. Let the drawing canvas know
+	     (send plot-canvas on-paint)))))
 
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
@@ -187,13 +201,6 @@
 
 ;; (define hashtags-result '(("#love" "#hate" "#war") ("15" "10" "8")))
 ;; (define users-data '(("@nemo" "@aaron" "@evie") ("24" "10" "7")))
-
-(define render-plot
-  (parameterize ([plot-width 300]
-		 [plot-height 300]
-		 [plot-background "white"])
-      (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
-
 
 ;;; Default frame -------------------------------------------------
 ;;; Everything that the user is seeing goes here
@@ -409,7 +416,7 @@
        [parent hidden-frame]       
        [paint-callback
 	(λ (canvas dc)
-	  (send dc draw-bitmap render-plot 0 0))]))
+	  (send dc draw-bitmap time-series-result 0 0))]))
 
 (define hashtag-table
   (new list-box%
