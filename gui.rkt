@@ -57,7 +57,7 @@
 (define user-mentions-result #f)
 ;;; We include a default plot. 
 (define time-series-result
-  (parameterize ([plot-width 300]
+  (parameterize ([plot-width 400]
 		 [plot-height 300]
 		 [plot-background "white"])
     (plot-bitmap (function (distribution-pdf (normal-dist 0 2)) -5 5))))
@@ -122,41 +122,76 @@
 
 ;;; When a new data file is loaded, we can automatically queue up
 ;;; requested analyses
+  ;; (define (update-analyses)
+  ;;   ;; Update hashtags
+  ;;   (hashtags-thread
+  ;;    (thread (λ ()
+  ;; 	       (task 'GUI-hashtags)
+  ;; 	       (set! hashtags-result
+  ;; 		 (let ([result (process-data (active-data-file))])
+  ;; 		   (list (map car result) (map number->string (map cdr result)))))
+  ;; 	       ;; Hashtags have been updated. Refresh the results table
+  ;; 	       ;; in case it's visible (otherwise the results won't
+  ;; 	       ;; refresh until the user manually selects the
+  ;; 	       ;; appropriate results tab
+  ;; 	       (send/apply hashtag-table set hashtags-result))))
+
+  ;;   ;; Update @users
+  ;;   (user-mentions-thread
+  ;;    (thread (λ ()
+  ;; 	       (task 'GUI-user-mentions)
+  ;; 	       (set! user-mentions-result
+  ;; 		 (let ([result (process-data (active-data-file))])
+  ;; 		   (list (map car result) (map number->string (map cdr result)))))
+  ;; 	       ;; @user names have been updated. Refresh the results
+  ;; 	       ;; table in case it's visible (otherwise the results
+  ;; 	       ;; won't refresh until the user manually selects the
+  ;; 	       ;; appropriate results tab
+  ;; 	       (send/apply users-table set user-mentions-result))))
+
+  ;;   ;; Update time series plot
+  ;;   (time-series-thread
+  ;;    (thread (λ ()
+  ;; 	       (task 'GUI-plot-time-series)
+  ;; 	       (set! time-series-result
+  ;; 		 (process-data (active-data-file)))
+  ;; 	       ;; Plot updated. Let the drawing canvas know
+  ;; 	       (send plot-canvas on-paint)))))
   (define (update-analyses)
     ;; Update hashtags
     (hashtags-thread
-     (thread (λ ()
-	       (task 'GUI-hashtags)
-	       (set! hashtags-result
-		 (let ([result (process-data (active-data-file))])
-		   (list (map car result) (map number->string (map cdr result)))))
-	       ;; Hashtags have been updated. Refresh the results table
-	       ;; in case it's visible (otherwise the results won't
-	       ;; refresh until the user manually selects the
-	       ;; appropriate results tab
-	       (send/apply hashtag-table set hashtags-result))))
+     (touch (future (λ ()
+		(task 'GUI-hashtags)
+		(set! hashtags-result
+		  (let ([result (process-data (active-data-file))])
+		    (list (map car result) (map number->string (map cdr result)))))
+		;; Hashtags have been updated. Refresh the results table
+		;; in case it's visible (otherwise the results won't
+		;; refresh until the user manually selects the
+		;; appropriate results tab
+		(send/apply hashtag-table set hashtags-result)))))
 
     ;; Update @users
     (user-mentions-thread
-     (thread (λ ()
-	       (task 'GUI-user-mentions)
-	       (set! user-mentions-result
-		 (let ([result (process-data (active-data-file))])
-		   (list (map car result) (map number->string (map cdr result)))))
-	       ;; @user names have been updated. Refresh the results
-	       ;; table in case it's visible (otherwise the results
-	       ;; won't refresh until the user manually selects the
-	       ;; appropriate results tab
-	       (send/apply users-table set user-mentions-result))))
+     (touch (future (λ ()
+		(task 'GUI-user-mentions)
+		(set! user-mentions-result
+		  (let ([result (process-data (active-data-file))])
+		    (list (map car result) (map number->string (map cdr result)))))
+		;; @user names have been updated. Refresh the results
+		;; table in case it's visible (otherwise the results
+		;; won't refresh until the user manually selects the
+		;; appropriate results tab
+		(send/apply users-table set user-mentions-result)))))
 
     ;; Update time series plot
     (time-series-thread
-     (thread (λ ()
-	       (task 'GUI-plot-time-series)
-	       (set! time-series-result
-		 (process-data (active-data-file)))
-	       ;; Plot updated. Let the drawing canvas know
-	       (send plot-canvas on-paint)))))
+     (touch (future (λ ()
+		(task 'GUI-plot-time-series)
+		(set! time-series-result
+		  (process-data (active-data-file)))
+		;; Plot updated. Let the drawing canvas know
+		(send plot-canvas on-paint))))))
 
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
