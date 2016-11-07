@@ -200,6 +200,47 @@
 	(loop (add1 num) (cons record json-array)
 	      (read-json (current-input-port))))))
 
+;; This is used to convert a raw JSON file into an internal racket
+;; data structure. It does so by only reading in one line of the
+;; original file at a time (to avoid consuming a lot of RAM). It keeps
+;; only those fields necessary for analysis (as determined by the data
+;; file type -- (data-type?)). This considerably reduces the size of
+;; the original data set, while enabling us to work within RAM. The
+;; goal of this is to enable parallelism across multiple processing
+;; cores. For very large files, this should be avoided. `file` should
+;; be a string or path
+(define (json->internal file)
+  ;; What we extract depends on the data type (e.g., is this tweet
+  ;; data?). The extractor amounts to a series of hash-ref calls to
+  ;; grab the necessary data from the JSON file. The data type is
+  ;; determined by (data-type?)
+  (let* ([type (with-input-from-file file (λ () (data-type?)))]
+	 [extractor
+	  (cond [(string=? type "Twitter Tweets")
+		 (λ (x)
+		   (hash 'text (hash-ref x 'text)
+			 'created_at (hash-ref x 'created_at)))]
+		[else
+		 (λ (x)
+		   (hash 'text (hash-ref x 'text)
+			 'created_at (hash-ref x 'created_at)))])])
+    (with-input-from-file file
+      (λ ()
+	(let loop ([result '()]
+		   [record (read-json (current-input-port))])
+	  (if (eof-object? record)
+	      (begin
+		;; We have a list of lists, 1 for each input record. Each sub-list
+		;; is a list contains hashtags present in that record, or an empty
+		;; list if none. Save this value to our cache
+		(when (cache-results?)
+		  (hash-set! (cache) 'internal result)
+		  (save-cache? #t))
+		;; Return value
+		result)
+	      (loop (cons (extractor record) result)
+		    (read-json (current-input-port)))))))))
+
 (define (hashtags record)
   (if (not (string? record))
       '()
@@ -212,6 +253,8 @@
       (let ([hash-regexp #px"@[[:alpha:]][[:alnum:]_]+"])
 	(regexp-match* hash-regexp record))))
 
+;;; Use this for processing files line-by-line. This is great (but
+;;; slow) for extrememly large data files.
 (define (find-hashtags-by-record)
   (let loop ([hash-tags '()]
 	     [record (read-json (current-input-port))])
@@ -228,6 +271,20 @@
 	(loop (cons (hashtags (hash-ref record 'text #f)) hash-tags)
 	      (read-json (current-input-port))))))
 
+;;; Use this for processing files that have been internalized in
+;;; Racket data structure with (JSON->internal). This is preferred
+;;; when possible because the data is already in memory, reduced
+;;; dramatically in size, and can be parallelized with futures. `lst`
+;;; should be a list of hashes. 
+(define (gui-find-hashtags-by-record lst)
+  (let ([tags (map (λ (x) (hashtags (hash-ref x 'text #f))) lst)])
+    (when (cache-results?)
+      (hash-set! (cache) 'hashtags tags)
+      (save-cache? #t))
+    tags))
+
+;;; Use this for processing files line-by-line. This is great (but
+;;; slow) for extrememly large data files.
 (define (find-usernames-by-record)
   (let loop ([user-names '()]
 	     [record (read-json (current-input-port))])
@@ -243,6 +300,19 @@
 	  user-names)
 	(loop (cons (usernames (hash-ref record 'text #f)) user-names)
 	      (read-json (current-input-port))))))
+
+;;; Use this for processing files that have been internalized in
+;;; Racket data structure with (JSON->internal). This is preferred
+;;; when possible because the data is already in memory, reduced
+;;; dramatically in size, and can be parallelized with futures. `lst`
+;;; should be a list of hashes. 
+(define (gui-find-usernames-by-record lst)
+  (let ([users (map (λ (x) (usernames (hash-ref x 'text #f))) lst)])
+    (when (cache-results?)
+      (hash-set! (cache) 'usernames users)
+      (save-cache? #t))
+    users))
+
 
 ;;; Call this to display hash-tags for the --hash-tags task. This
 ;;; function is designed for printing out results during command line
@@ -279,7 +349,7 @@
 ;;; This is meant to be called by the GUI server only. It returns
 ;;; hashtag results as an X-expression. It reads from the current
 ;;; input port, which should be set to the user's data file
-(define (GUI-hashtags)
+(define (GUI-hashtags lst)
   (let ([hash-tags (hash-ref (cache) 'hashtags #f)]
 	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
 			 (λ (x y) (> (cdr x) (cdr y)))))])
@@ -287,7 +357,7 @@
 	;; Use cached data
         (f hash-tags)
 	;; No cache. Calculate using raw data
-        (f (find-hashtags-by-record)))))
+        (f (gui-find-hashtags-by-record lst)))))
 
 ;;; Call this to display @usernames for the --user-mentions task
 (define (display-user-mentions)
@@ -303,7 +373,7 @@
 ;;; This is meant to be called by the GUI server only. It returns
 ;;; @user-mentions results as an X-expression. It reads from the
 ;;; current input port, which should be set to the user's data file
-(define (GUI-user-mentions)
+(define (GUI-user-mentions lst)
   (let ([user-names (hash-ref (cache) 'usernames #f)]
 	[f (λ (x) (sort  (hash->list (samples->hash (flatten x)))
 			 (λ (x y) (> (cdr x) (cdr y)))))])
@@ -311,7 +381,7 @@
 	;; Use cached data
         (f user-names)
 	;; No cache. Calculate using raw data
-        (f (find-usernames-by-record)))))
+        (f (gui-find-usernames-by-record lst)))))
 
 ;;; Original method for web gui
 ;; (define (web-GUI-user-mentions)
@@ -332,7 +402,9 @@
 ;; 				   (td ,(number->string (cdr x)))))
 ;; 		       (f (find-usernames-by-record)))))))
 
-;;; Get raw timestamp from JSON
+;;; Get raw timestamp from JSON. Use this for extremely large files
+;;; only. User the faster gui-json-get-raw-timestamps for smaller
+;;; files that can be stored in RAM. 
 (define (json-get-raw-timestamps)
   (let ([tmp (hash-ref (cache) 'timestamps #f)])
     (if tmp
@@ -352,10 +424,22 @@
 		     tstamps)
 		    (read-json (current-input-port))))))))
 
+;;; Use this for smaller data that has been internalized into Racket
+;;; structures with JSON->internal. Use the non-gui version for large
+;;; files. 
+(define (gui-json-get-raw-timestamps lst)
+  (let ([tstamps (map (λ (x) (hash-ref x 'created_at)) lst)])
+    (when (cache-results?)
+      (hash-set! (cache) 'timestamps tstamps)
+      (save-cache? #t))
+    tstamps))
+
 ;; This reads json one item at a time, and keeps a record of its
 ;; timestamp
-(define (json-timestamps)
-  (let ([tstamps (json-get-raw-timestamps)])
+(define (json-timestamps [lst #f])
+  (let ([tstamps (if lst
+		     (gui-json-get-raw-timestamps lst)
+		     (json-get-raw-timestamps))])
     (map (λ (x)
 	   (string->date x
 			 "~a ~b ~d ~H:~M:~S ~z ~Y"))
@@ -363,8 +447,8 @@
 
 ;;; Time series. Simple counts of data records by unit time. Units can
 ;;; be second, minute, hour, day, month, or year as a symbol
-(define (get-time-series #:units [units 'minute])
-  (let ([timestamps (json-timestamps)]
+(define (get-time-series [lst #f] #:units [units 'minute])
+  (let ([timestamps (json-timestamps lst)]
 	[time-format
 	 (cond
 	  [(equal? units 'second) "~Y ~m ~d ~H:~M:~S"]
@@ -481,10 +565,10 @@
 ;; 	   (class "img-responsive")))))
 
 ;;; Plot time series using the gui
-(define (GUI-plot-time-series #:units [units 'minute])
+(define (GUI-plot-time-series lst #:units [units 'minute])
   ;; Expensive load time. Only load this when needed
   (local-require plot)
-  (let ([d (get-time-series #:units units)]
+  (let ([d (get-time-series lst #:units units)]
 	[time-format
 	 (cond
 	  [(equal? units 'second) "~Y ~m ~d ~H:~M:~S"]

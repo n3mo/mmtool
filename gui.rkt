@@ -42,6 +42,14 @@
 ;;; twitter-stream, wikipedia-text, etc.)
 (define active-data-type (make-parameter #f))
 
+;;; If the data is small enough, we end up converting the raw JSON
+;;; into an internal Racket data type, throwing away 95% of the
+;;; useless information, keeping only the stuff needed for our
+;;; analyses in RAM. The raw data is unaffected. The minimized Racket
+;;; data is stored in the following parameter. The structure and type
+;;; of this data depends on the result of (data-type?)
+(define data (make-parameter #f))
+
 ;;; Is massmine installed and available on the user's path (as
 ;;; detected by mmtool?). We assume no, but check below. If installed,
 ;;; this parameter is set to the version number of the installed
@@ -125,78 +133,79 @@
   ;; (define (update-analyses)
   ;;   ;; Update hashtags
   ;;   (hashtags-thread
-  ;;    (thread (λ ()
-  ;; 	       (task 'GUI-hashtags)
-  ;; 	       (set! hashtags-result
-  ;; 		 (let ([result (process-data (active-data-file))])
-  ;; 		   (list (map car result) (map number->string (map cdr result)))))
-  ;; 	       ;; Hashtags have been updated. Refresh the results table
-  ;; 	       ;; in case it's visible (otherwise the results won't
-  ;; 	       ;; refresh until the user manually selects the
-  ;; 	       ;; appropriate results tab
-  ;; 	       (send/apply hashtag-table set hashtags-result))))
+  ;;    (touch (future (λ ()
+  ;; 		(task 'GUI-hashtags)
+  ;; 		(set! hashtags-result
+  ;; 		  (let ([result (process-data (active-data-file))])
+  ;; 		    (list (map car result) (map number->string (map cdr result)))))
+  ;; 		;; Hashtags have been updated. Refresh the results table
+  ;; 		;; in case it's visible (otherwise the results won't
+  ;; 		;; refresh until the user manually selects the
+  ;; 		;; appropriate results tab
+  ;; 		(send/apply hashtag-table set hashtags-result)))))
 
   ;;   ;; Update @users
   ;;   (user-mentions-thread
-  ;;    (thread (λ ()
-  ;; 	       (task 'GUI-user-mentions)
-  ;; 	       (set! user-mentions-result
-  ;; 		 (let ([result (process-data (active-data-file))])
-  ;; 		   (list (map car result) (map number->string (map cdr result)))))
-  ;; 	       ;; @user names have been updated. Refresh the results
-  ;; 	       ;; table in case it's visible (otherwise the results
-  ;; 	       ;; won't refresh until the user manually selects the
-  ;; 	       ;; appropriate results tab
-  ;; 	       (send/apply users-table set user-mentions-result))))
+  ;;    (touch (future (λ ()
+  ;; 		(task 'GUI-user-mentions)
+  ;; 		(set! user-mentions-result
+  ;; 		  (let ([result (process-data (active-data-file))])
+  ;; 		    (list (map car result) (map number->string (map cdr result)))))
+  ;; 		;; @user names have been updated. Refresh the results
+  ;; 		;; table in case it's visible (otherwise the results
+  ;; 		;; won't refresh until the user manually selects the
+  ;; 		;; appropriate results tab
+  ;; 		(send/apply users-table set user-mentions-result)))))
 
   ;;   ;; Update time series plot
   ;;   (time-series-thread
-  ;;    (thread (λ ()
-  ;; 	       (task 'GUI-plot-time-series)
-  ;; 	       (set! time-series-result
-  ;; 		 (process-data (active-data-file)))
-  ;; 	       ;; Plot updated. Let the drawing canvas know
-  ;; 	       (send plot-canvas on-paint)))))
+  ;;    (touch (future (λ ()
+  ;; 		(task 'GUI-plot-time-series)
+  ;; 		(set! time-series-result
+  ;; 		  (process-data (active-data-file)))
+  ;; 		;; Plot updated. Let the drawing canvas know
+  ;; 		(send plot-canvas on-paint))))))
   (define (update-analyses)
     ;; Update hashtags
     (hashtags-thread
-     (touch (future (λ ()
-		(task 'GUI-hashtags)
-		(set! hashtags-result
-		  (let ([result (process-data (active-data-file))])
-		    (list (map car result) (map number->string (map cdr result)))))
-		;; Hashtags have been updated. Refresh the results table
-		;; in case it's visible (otherwise the results won't
-		;; refresh until the user manually selects the
-		;; appropriate results tab
-		(send/apply hashtag-table set hashtags-result)))))
+     (touch (future
+	     (λ ()
+	       (set! hashtags-result
+		 (let ([result (GUI-hashtags (data))])
+		   (list (map car result) (map number->string (map cdr result)))))
+	       ;; Hashtags have been updated. Refresh the results table
+	       ;; in case it's visible (otherwise the results won't
+	       ;; refresh until the user manually selects the
+	       ;; appropriate results tab
+	       (send/apply hashtag-table set hashtags-result)))))
 
     ;; Update @users
     (user-mentions-thread
-     (touch (future (λ ()
-		(task 'GUI-user-mentions)
-		(set! user-mentions-result
-		  (let ([result (process-data (active-data-file))])
-		    (list (map car result) (map number->string (map cdr result)))))
-		;; @user names have been updated. Refresh the results
-		;; table in case it's visible (otherwise the results
-		;; won't refresh until the user manually selects the
-		;; appropriate results tab
-		(send/apply users-table set user-mentions-result)))))
+     (touch (future
+	     (λ ()
+	       (set! user-mentions-result
+		 (let ([result (GUI-user-mentions (data))])
+		   (list (map car result) (map number->string (map cdr result)))))
+	       ;; @user names have been updated. Refresh the results
+	       ;; table in case it's visible (otherwise the results
+	       ;; won't refresh until the user manually selects the
+	       ;; appropriate results tab
+	       (send/apply users-table set user-mentions-result)))))
 
     ;; Update time series plot
     (time-series-thread
-     (touch (future (λ ()
-		(task 'GUI-plot-time-series)
-		(set! time-series-result
-		  (process-data (active-data-file)))
-		;; Plot updated. Let the drawing canvas know
-		(send plot-canvas on-paint))))))
+     (touch (future
+	     (λ ()
+	       (set! time-series-result
+		 (GUI-plot-time-series (data) #:units (time-units)))
+	       ;; Plot updated. Let the drawing canvas know
+	       (send plot-canvas on-paint))))))
 
 ;;; This function should be called whenever a new data file is set as
 ;;; the active-data-file. It does things like update the data viewer,
 ;;; trigger the generation of new analyses, etc.
   (define (data-file-update)
+    
     ;; Read in the first n entries from the data file for use in the
     ;; data viewer
     (data-file-preview
@@ -219,6 +228,15 @@
 	   (~r (add1 (data-viewer-idx)) #:min-width 3 #:pad-string "0")
 	   "/"
 	   (~r (length (data-file-preview)) #:min-width 3 #:pad-string "0")))
+
+    ;; Now that we have a sample of the raw data (in JSON) for
+    ;; viewing, let's try to condense the possible large raw data into
+    ;; the parts that we need. This amounts to keeping only part of
+    ;; the JSON response in memory. TODO: check the file size before
+    ;; running this. For extremely large files, consider skipping this
+    ;; step and resorting to line-oriented processing.
+    (data (json->internal (active-data-file)))
+
     ;; Simple visuals are parameters are set. Now we can queue up any
     ;; analyses that need to run
     (update-analyses))
@@ -281,14 +299,19 @@
 	 [min-width (round (/ (gui-width) 2))]))
 
 ;;; Panel buttons
+  ;; (new button% [parent control-panel]
+  ;;      [label "Collection"]
+  ;; 					; Callback procedure for a button click:
+  ;;      [callback (lambda (button event)
+  ;; 		   (send results-panel reparent hidden-frame)
+  ;; 		   (send settings-panel reparent hidden-frame)
+  ;; 		   (send viewer-panel reparent hidden-frame)
+  ;; 		   (send collection-panel reparent visuals-panel))])
   (new button% [parent control-panel]
        [label "Collection"]
 					; Callback procedure for a button click:
        [callback (lambda (button event)
-		   (send results-panel reparent hidden-frame)
-		   (send settings-panel reparent hidden-frame)
-		   (send viewer-panel reparent hidden-frame)
-		   (send collection-panel reparent visuals-panel))])
+		   (update-analyses))])
   (new button% [parent control-panel]
        [label "Viewer"]
 					; Callback procedure for a button click:
